@@ -2,12 +2,21 @@
 
 use App\Context\Representation\Controller\LeapYearController;
 use App\Context\Representation\Controller\TestController;
+use App\User\Representation\Controller\UserRegisterController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
 $routes = new RouteCollection();
+
+$routes->add('test', new Route('/test', [
+    '_controller' => [TestController::class, 'index']
+]));
+
+$routes->add('user.register', new Route('/user/register', [
+    '_controller' => [UserRegisterController::class, '__invoke']
+]));
 
 $routes->add('hello', new Route('/hello/{name}', [
     'name' => 'world',
@@ -21,9 +30,6 @@ $routes->add('hello', new Route('/hello/{name}', [
     }
 ]));
 
-$routes->add('test', new Route('/test', [
-    '_controller' => [TestController::class, 'index']
-]));
 
 $routes->add('bye', new Route('/bye', [
     '_controller' => function (Request $request): Response {

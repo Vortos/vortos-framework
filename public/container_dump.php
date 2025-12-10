@@ -27,6 +27,7 @@ class CachedContainer extends Container
         $this->methodMap = [
             'App\\Context\\Representation\\Controller\\LeapYearController' => 'getLeapYearControllerService',
             'App\\Context\\Representation\\Controller\\TestController' => 'getTestControllerService',
+            'App\\User\\Representation\\Controller\\UserRegisterController' => 'getUserRegisterControllerService',
             'framework' => 'getFrameworkService',
         ];
 
@@ -50,16 +51,22 @@ class CachedContainer extends Container
             'App\\Context\\Application\\Command\\UserMessageHandler' => true,
             'App\\Context\\Domain\\Entity\\LeapYear' => true,
             'App\\Context\\Representation\\View' => true,
+            'App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommand' => true,
+            'App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommandHandler' => true,
+            'Fortizan\\Tekton\\Attribute\\Cqrs\\AsCommandHandler' => true,
             'Fortizan\\Tekton\\Container\\Container' => true,
             'Fortizan\\Tekton\\Controller\\ErrorController' => true,
-            'Fortizan\\Tekton\\Database\\AsCommandHandler' => true,
             'Fortizan\\Tekton\\Database\\AsQueryHandler' => true,
+            'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Cqrs\\CommandHandlerPass' => true,
             'Fortizan\\Tekton\\EventListener\\ContentLengthListener' => true,
             'Fortizan\\Tekton\\EventListener\\GoogleListener' => true,
             'Fortizan\\Tekton\\EventListener\\StringResponseListener' => true,
             'Fortizan\\Tekton\\Event\\ResponseEvent' => true,
             'Fortizan\\Tekton\\Event\\TestEvent' => true,
             'Fortizan\\Tekton\\Http\\Kernal' => true,
+            'Fortizan\\Tekton\\Interface\\CommandHandlerInterface' => true,
+            'Fortizan\\Tekton\\Interface\\CommandInterface' => true,
+            'Symfony\\Component\\Messenger\\MessageBusInterface $commandBus' => true,
             'Symfony\\Component\\Messenger\\MessageBusInterface $messageBus' => true,
             'argument_resolver' => true,
             'context' => true,
@@ -75,6 +82,10 @@ class CachedContainer extends Container
             'messenger.bus.default.messenger.handlers_locator' => true,
             'messenger.middleware.handle_message' => true,
             'request_stack' => true,
+            'tekton.bus.command' => true,
+            'tekton.bus.command.locator' => true,
+            'tekton.bus.command.messenger.handlers_locator' => true,
+            'tekton.bus.command.middleware' => true,
         ];
     }
 
@@ -98,6 +109,16 @@ class CachedContainer extends Container
         return $container->services['App\\Context\\Representation\\Controller\\TestController'] = new \App\Context\Representation\Controller\TestController(new \Symfony\Component\Messenger\MessageBus([new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator(['App\\Context\\Application\\Command\\UserMessage' => new RewindableGenerator(function () use ($container) {
             yield 0 => ($container->privates['.messenger.handler_descriptor.vcRN_Hf'] ?? self::get_Messenger_HandlerDescriptor_VcRNHfService($container));
         }, 1)]))]));
+    }
+
+    /**
+     * Gets the public 'App\User\Representation\Controller\UserRegisterController' shared autowired service.
+     *
+     * @return \App\User\Representation\Controller\UserRegisterController
+     */
+    protected static function getUserRegisterControllerService($container)
+    {
+        return $container->services['App\\User\\Representation\\Controller\\UserRegisterController'] = new \App\User\Representation\Controller\UserRegisterController(new \Symfony\Component\Messenger\MessageBus([new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator(['App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommand' => [new \App\User\Application\Command\RegisterUser\RegisterUserCommandHandler()]]))]));
     }
 
     /**

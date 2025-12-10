@@ -31,7 +31,6 @@ if(false){
 }
 
 $container->set('routes', $routes); 
-// dd($container);
 $framework = $container->get('framework');
 
 $response = $framework->handle(request:$request);

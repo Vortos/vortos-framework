@@ -1,6 +1,6 @@
 <?php
 
-namespace Fortizan\Tekton\Database;
+namespace Fortizan\Tekton\Attribute\Cqrs;
 
 use Attribute;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -9,7 +9,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 class AsCommandHandler extends AsMessageHandler
 {
     public function __construct(
-        public ?string $bus = 'command.bus',
+        // public ?string $bus = null,
+        public ?string $bus = 'messenger.bus.command',
         public ?string $fromTransport = null,
         public ?string $handles = null,
         public ?string $method = null,
