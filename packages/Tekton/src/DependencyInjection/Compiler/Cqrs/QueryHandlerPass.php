@@ -3,10 +3,8 @@
 namespace Fortizan\Tekton\DependencyInjection\Compiler\Cqrs;
 
 use Exception;
-use Fortizan\Tekton\Bus\Query\Contract\QueryHandlerInterface;
 use Fortizan\Tekton\Bus\Query\Contract\QueryInterface;
 use ReflectionClass;
-use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -28,24 +26,61 @@ class QueryHandlerPass implements CompilerPassInterface
 
         foreach ($handlers as $serviceId => $metaData) {
             $handlerDefinision = $container->getDefinition($serviceId);
-         
-            $method = new ReflectionMethod($handlerDefinision->getClass() . "::__invoke");
-            $handlerClass = $method->getDeclaringClass();
-            $handlerInterfaceNames = $handlerClass->getInterfaceNames();
 
-            if (!in_array(QueryHandlerInterface::class, $handlerInterfaceNames)) {
+            $handlerClass = $container->getParameterBag()->resolveValue($handlerDefinision->getClass());
+
+            if (!class_exists($handlerClass)) {
+                continue;
+            }
+
+            $handlerReflectClass = new ReflectionClass($handlerClass);
+
+            if (!$handlerReflectClass->hasMethod('__invoke')) {
                 throw new Exception(
-                    "Did you forgot to implement 'QueryHandlerInterface' in your " . $handlerClass->getShortName() . " class ?"
+                    sprintf(
+                        "The QueryHandler class '%s' must have an '__invoke' method.",
+                        $handlerReflectClass->getShortName()
+                    )
                 );
             }
 
-            $queryFqcn = $method->getParameters()[0]->getType()->getName();
-            $queryClass = new ReflectionClass($queryFqcn);
-            $queryInterfaceNames = $queryClass->getInterfaceNames();
-
-            if (!in_array(QueryInterface::class, $queryInterfaceNames)) {
+            $handlerMethod = $handlerReflectClass->getMethod('__invoke');
+            $parameters = $handlerMethod->getParameters();
+            if (count($parameters) !== 1) {
                 throw new Exception(
-                    "Did you forgot to implement 'QueryInterface' in your " . $queryClass->getShortName() . " class ?"
+                    sprintf(
+                        "'__invoke' method in your '%s' class must have exactly 1 parameter.",
+                        $handlerReflectClass->getShortName()
+                    )
+                );
+            }
+
+            $queryType = $parameters[0]->getType();
+            
+            if (!$queryType instanceof \ReflectionNamedType || $queryType->isBuiltin()) {
+                throw new Exception(sprintf(
+                    "The argument in '__invoke' method of '%s' class must be type-hinted with a specific class.",
+                    $handlerReflectClass->getShortName()
+                ));
+            }
+
+
+            $queryFqcn = $queryType->getName();
+            $queryClass = new ReflectionClass($queryFqcn);
+
+            if (!is_subclass_of($queryFqcn, QueryInterface::class)) {
+                throw new Exception(
+                    sprintf(
+                        "The query class '%s' (used in '%s') must implement QueryInterface.",
+                        $queryClass->getShortName(),
+                        $handlerReflectClass->getShortName()
+                    )
+                );
+            }
+
+            if (isset($handlersMap[$queryFqcn])) {
+                throw new Exception(
+                    sprintf("Duplicate handler for query '%s'.", $queryClass->getShortName())
                 );
             }
 

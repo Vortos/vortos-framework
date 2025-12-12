@@ -3,10 +3,8 @@
 namespace Fortizan\Tekton\DependencyInjection\Compiler\Cqrs;
 
 use Exception;
-use Fortizan\Tekton\Bus\Command\Contract\CommandHandlerInterface;
 use Fortizan\Tekton\Bus\Command\Contract\CommandInterface;
 use ReflectionClass;
-use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -28,24 +26,62 @@ class CommandHandlerPass implements CompilerPassInterface
 
         foreach ($handlers as $serviceId => $metaData) {
             $handlerDefinision = $container->getDefinition($serviceId);
-         
-            $method = new ReflectionMethod($handlerDefinision->getClass() . "::__invoke");
-            $handlerClass = $method->getDeclaringClass();
-            $handlerInterfaceNames = $handlerClass->getInterfaceNames();
 
-            if (!in_array(CommandHandlerInterface::class, $handlerInterfaceNames)) {
+            $handlerClass = $container->getParameterBag()->resolveValue($handlerDefinision->getClass());
+
+            if (!class_exists($handlerClass)) {
+                continue;
+            }
+
+            $handlerReflectClass = new ReflectionClass($handlerClass);
+
+            if (!$handlerReflectClass->hasMethod('__invoke')) {
                 throw new Exception(
-                    "Did you forgot to implement 'CommandHandlerInterface' in your " . $handlerClass->getShortName() . " class ?"
+                    sprintf(
+                        "The CommandHandler class '%s' must have an '__invoke' method.",
+                        $handlerReflectClass->getShortName()
+                    )
                 );
             }
 
-            $commandFqcn = $method->getParameters()[0]->getType()->getName();
-            $commandClass = new ReflectionClass($commandFqcn);
-            $commandInterfaceNames = $commandClass->getInterfaceNames();
-
-            if (!in_array(CommandInterface::class, $commandInterfaceNames)) {
+            $handlerMethod = $handlerReflectClass->getMethod('__invoke');
+            $parameters = $handlerMethod->getParameters();
+            if (count($parameters) !== 1) {
                 throw new Exception(
-                    "Did you forgot to implement 'CommandInterface' in your " . $commandClass->getShortName() . " class ?"
+                    sprintf(
+                        "'__invoke' method in your '%s' class must have exactly 1 parameter.",
+                        $handlerReflectClass->getShortName()
+                    )
+                );
+            }
+
+            $commandType = $parameters[0]->getType();
+
+            if (!$commandType instanceof \ReflectionNamedType || $commandType->isBuiltin()) {
+                throw new Exception(sprintf(
+                    "The argument in '__invoke' method of '%s' class must be type-hinted with a specific class.",
+                    $handlerReflectClass->getShortName()
+                ));
+            }
+
+
+            $commandFqcn = $commandType->getName();
+            $commandClass = new ReflectionClass($commandFqcn);
+
+            if (!is_subclass_of($commandFqcn, CommandInterface::class)) {
+                throw new Exception(
+                    sprintf(
+                        "The command class '%s' (used in '%s') must implement CommandInterface.",
+                        $commandClass->getShortName(),
+                        $handlerReflectClass->getShortName()
+                    )
+                );
+            }
+
+
+            if (isset($handlersMap[$commandFqcn])) {
+                throw new Exception(
+                    sprintf("Duplicate handler for command '%s'.", $commandClass->getShortName())
                 );
             }
 

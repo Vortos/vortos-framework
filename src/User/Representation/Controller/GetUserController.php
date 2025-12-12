@@ -4,6 +4,7 @@ namespace App\User\Representation\Controller;
 
 use App\User\Application\Query\GetUser\GetUserQuery;
 use Fortizan\Tekton\Attribute\ApiController;
+use Fortizan\Tekton\Bus\Query\QueryBus;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,15 +14,16 @@ use Symfony\Component\Routing\Attribute\Route;
 
 #[Route(path:'/user/get', name:'user.show')]
 #[ApiController]
-class GetUserController{
+class GetUserController
+{
+
     public function __construct(
-        private MessageBusInterface $queryBus
+        private QueryBus $queryBus
     ){}
 
     public function __invoke(Request $request):Response
     {
-        $envelop = $this->queryBus->dispatch(message: new GetUserQuery(userId: 1));
-        $stamp = $envelop->last(HandledStamp::class);
-        return new Response(new JsonResponse($stamp->getResult()));
+        $response = $this->queryBus->ask(query: new GetUserQuery(userId: 1));
+        return $response;
     }
 }

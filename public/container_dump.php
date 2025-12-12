@@ -55,10 +55,8 @@ class CachedContainer extends Container
             'Fortizan\\Tekton\\Attribute\\ApiController' => true,
             'Fortizan\\Tekton\\Bus\\Command\\Attribute\\CommandHandler' => true,
             'Fortizan\\Tekton\\Bus\\Command\\CommandBus' => true,
-            'Fortizan\\Tekton\\Bus\\Command\\Contract\\CommandHandlerInterface' => true,
             'Fortizan\\Tekton\\Bus\\Command\\Contract\\CommandInterface' => true,
             'Fortizan\\Tekton\\Bus\\Query\\Attribute\\QueryHandler' => true,
-            'Fortizan\\Tekton\\Bus\\Query\\Contract\\QueryHandlerInterface' => true,
             'Fortizan\\Tekton\\Bus\\Query\\Contract\\QueryInterface' => true,
             'Fortizan\\Tekton\\Bus\\Query\\QueryBus' => true,
             'Fortizan\\Tekton\\Container\\Container' => true,
@@ -107,7 +105,7 @@ class CachedContainer extends Container
      */
     protected static function getGetUserControllerService($container)
     {
-        return $container->services['App\\User\\Representation\\Controller\\GetUserController'] = new \App\User\Representation\Controller\GetUserController(new \Symfony\Component\Messenger\MessageBus([new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator(['App\\User\\Application\\Query\\GetUser\\GetUserQuery' => [new \App\User\Application\Query\GetUser\GetUserQueryHandler()]]))]));
+        return $container->services['App\\User\\Representation\\Controller\\GetUserController'] = new \App\User\Representation\Controller\GetUserController(new \Fortizan\Tekton\Bus\Query\QueryBus(new \Symfony\Component\Messenger\MessageBus([new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator(['App\\User\\Application\\Query\\GetUser\\GetUserQuery' => [new \App\User\Application\Query\GetUser\GetUserQueryHandler()]]))])));
     }
 
     /**
@@ -117,7 +115,7 @@ class CachedContainer extends Container
      */
     protected static function getUserRegisterControllerService($container)
     {
-        return $container->services['App\\User\\Representation\\Controller\\UserRegisterController'] = new \App\User\Representation\Controller\UserRegisterController(new \Symfony\Component\Messenger\MessageBus([new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator(['App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommand' => [new \App\User\Application\Command\RegisterUser\RegisterUserCommandHandler()]]))]));
+        return $container->services['App\\User\\Representation\\Controller\\UserRegisterController'] = new \App\User\Representation\Controller\UserRegisterController(new \Fortizan\Tekton\Bus\Command\CommandBus(new \Symfony\Component\Messenger\MessageBus([new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator(['App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommand' => [new \App\User\Application\Command\RegisterUser\RegisterUserCommandHandler()]]))])));
     }
 
     /**
