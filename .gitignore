@@ -1,2 +1,3 @@
 /packages/Tekton/composer.lock
-var
+var/cache
+var/log
