@@ -18,6 +18,7 @@ class ComposerStaticInit3e5b847e212d2f2598a72bbffe95171d
         'b6b991a57620e2fb6b2f66f03fe9ddc2' => __DIR__ . '/..' . '/symfony/string/Resources/functions.php',
         '2203a247e6fda86070a5e4e07aed533a' => __DIR__ . '/..' . '/symfony/clock/Resources/now.php',
         '6124b4c8570aa390c21fafd04a26c69f' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/deep_copy.php',
+        '3a37ebac017bc098e9a86b35401e7a68' => __DIR__ . '/..' . '/mongodb/mongodb/src/functions.php',
         'ec07570ca5a812141189b1fa81503674' => __DIR__ . '/..' . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
     );
 
@@ -66,6 +67,7 @@ class ComposerStaticInit3e5b847e212d2f2598a72bbffe95171d
         'M' =>
         array (
             'Monolog\\' => 8,
+            'MongoDB\\' => 8,
         ),
         'F' =>
         array (
@@ -235,6 +237,10 @@ class ComposerStaticInit3e5b847e212d2f2598a72bbffe95171d
         'Monolog\\' =>
         array (
             0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
+        ),
+        'MongoDB\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/mongodb/mongodb/src',
         ),
         'Fortizan\\Tekton\\' =>
         array (

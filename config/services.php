@@ -12,6 +12,7 @@ return static function (ContainerConfigurator $configurator) {
     $services->load('App\\', '../src/')
         ->exclude([
             '../src/*/Representation/View/',
-            '../src/Entity/'
+            '../src/Entity/',
+            '../src/test.php'
         ]);
 };

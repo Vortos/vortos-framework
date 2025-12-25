@@ -6,7 +6,7 @@ use App\User\Domain\Entity\User;
 use App\User\Infrastructure\Query\DbalUserFinder;
 use App\User\Infrastructure\Repository\DoctrineUserRepository;
 use Fortizan\Tekton\Attribute\ApiController;
-use Fortizan\Tekton\Database\DoctrineFactory;
+use Fortizan\Tekton\Database\DatabaseManager;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -14,15 +14,21 @@ use Symfony\Component\Routing\Attribute\Route;
 #[ApiController]
 class TestDoctrineController 
 {
+
+    public function __construct(
+        private DatabaseManager $db
+    ){
+    }
+
     public function __invoke() : Response
     {
-        $entityFactory = new DoctrineFactory();
-
+        
+        $this->db->write()->persist()
         $connectionParams = [
             'host' => $_ENV['POSTGRES_HOST'],
             'user' => $_ENV['POSTGRES_USER'],
             'password' => $_ENV['POSTGRES_PASSWORD'],
-            'dbname' => $_ENV['POSTGRES_DB'],
+            'dbname' => $_ENV['POSTGRES_DB_NAME'],
             'driver' => 'pdo_pgsql'
         ];
         $entityPaths = [__DIR__ . "/../../Domain/Entity"];
@@ -32,7 +38,6 @@ class TestDoctrineController
         $connection = $entityFactory->createConnection($connectionParams, $entityPaths, true);
 
         $user = new User();
-        $user->setId(1);
         $user->setName("sachintha");
         $user->setEmail('abc@gmail.com');
 
