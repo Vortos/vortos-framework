@@ -15,7 +15,7 @@ class UserProjector
     #[AsMessageHandler]
     public function onUserCreated(UserCreatedEvent $event): void
     {
-        $this->writer->upsert('user', $event->id, [
+        $this->writer->upsert('users', $event->id, [
             'name' => $event->name,
             'email' => $event->email,
             'synced_at' => date('Y-m-d H:i:s')

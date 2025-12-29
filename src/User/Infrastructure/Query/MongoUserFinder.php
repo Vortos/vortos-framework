@@ -2,17 +2,28 @@
 
 namespace App\User\Infrastructure\Query;
 
-use MongoDB\Database as MongoDatabase;
+use App\User\Application\Query\Contract\UserFinderInterface;
+use Fortizan\Tekton\Persistence\Contract\ProjectionReaderInterface;
 
-class MongoUserFinder
+class MongoUserFinder implements UserFinderInterface
 {
+    private const COLLECTION = 'users';
+
     public function __construct(
-        private MongoDatabase $db
-    ){
+        private ProjectionReaderInterface $projectionReader
+    ) {}
+
+    public function findById(string $id): array
+    {
+        $user = $this->projectionReader->get(self::COLLECTION, $id);
+
+        return $user;
     }
 
-    public function findById(int $id): array
+    public function findByEmail(string $email): array
     {
-        return (array) $this->db->user->findOne(['_id' => $id]);
+        $user = $this->projectionReader->filter(self::COLLECTION, ['email' => $email]);
+
+        return $user;
     }
 }

@@ -4,15 +4,15 @@ namespace App\User\Domain\Exception;
 
 use Exception;
 
-class UserNotFoundException extends Exception
+class UserAlreadyExistException extends Exception
 {
     private function __construct(string $message)
     {
         parent::__construct($message);
     }
 
-    public static function withId(string $id):self
+    public static function withEmail(string $email):self
     {
-        return new self("User not found with ID: {$id}");
+        return new self("A user with email {$email} already exists");
     }
 }

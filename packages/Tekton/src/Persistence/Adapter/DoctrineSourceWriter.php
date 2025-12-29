@@ -12,6 +12,11 @@ class DoctrineSourceWriter implements SourceWriterInterface
     ){
     }
 
+    public function find(string $aggregate, $id): ?object
+    {
+        return $this->em->find($aggregate, $id);
+    }
+
     public function persist(object $aggregate):void
     {
         $this->em->persist($aggregate);

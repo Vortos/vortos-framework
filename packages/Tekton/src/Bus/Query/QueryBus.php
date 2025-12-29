@@ -3,9 +3,6 @@
 namespace Fortizan\Tekton\Bus\Query;
 
 use Fortizan\Tekton\Bus\Query\Contract\QueryInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Messenger\MessageBus;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 
@@ -16,7 +13,7 @@ class QueryBus
         private MessageBusInterface $queryBus
     ) {}
 
-    public function ask(QueryInterface $query): Response
+    public function ask(QueryInterface $query): mixed
     {
         $envelop = $this->queryBus->dispatch(message: $query);
         
@@ -24,6 +21,6 @@ class QueryBus
 
         $result = $stamp->getResult();
 
-        return new JsonResponse($result);
+        return $result;
     }
 }

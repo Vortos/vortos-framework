@@ -2,25 +2,27 @@
 
 namespace App\User\Representation\Controller;
 
+use App\User\Application\Query\GetUser\GetUserQuery;
 use Fortizan\Tekton\Attribute\ApiController;
-use Fortizan\Tekton\Persistence\PersistenceManager;
+use Fortizan\Tekton\Bus\Query\QueryBus;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[ApiController]
-#[Route(name:'user.mongo', path:'/user/read')]
+#[Route(name: 'user.mongo', path: '/user/read')]
 class TestMongoController
 {
     public function __construct(
-        private PersistenceManager $persistenceManager
-    ){
-    }
+        private QueryBus $queryBus
+    ) {}
 
-    public function __invoke():Response
-    {  
-        $user = $this->persistenceManager->projectionReader()->get('user', '019b63cd-fc8b-7c75-9bec-1cf85370739d');
+    public function __invoke(): Response
+    {
+        $query = new GetUserQuery('019b6c0b-026a-7bf4-9b73-244394168acf');
 
-        return new JsonResponse($user);
+        $result = $this->queryBus->ask($query);
+
+        return new JsonResponse($result);
     }
 }

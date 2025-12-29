@@ -2,11 +2,23 @@
 
 namespace App\User\Application\Query\GetUser;
 
-class GetUserResponse {
+use JsonSerializable;
+
+readonly class GetUserResponse implements JsonSerializable 
+{
     public function __construct(
-        public int $userId,
-        public string $userName,
-        public string $userEmail
+        private string $userId,
+        private string $userName,
+        private string $userEmail
     )
     {}
+
+    public function jsonSerialize(): mixed
+    {
+        return [
+            'id' => $this->userId,
+            'email' => $this->userEmail,
+            'name' => $this->userName
+        ];
+    }
 }

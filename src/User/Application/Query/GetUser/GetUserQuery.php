@@ -7,7 +7,7 @@ use Fortizan\Tekton\Bus\Query\Contract\QueryInterface;
 class GetUserQuery implements QueryInterface
 {
     public function __construct(
-        public int $userId
+        public string $userId
     )
     {}
 }

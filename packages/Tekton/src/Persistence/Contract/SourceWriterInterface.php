@@ -4,6 +4,7 @@ namespace Fortizan\Tekton\Persistence\Contract;
 
 interface SourceWriterInterface
 {
+    public function find(string $aggregate, $id):?object;
     public function persist(object $aggregate):void;
     public function remove(object $aggregate):void;
     public function flush():void;

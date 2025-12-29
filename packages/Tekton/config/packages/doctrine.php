@@ -25,7 +25,7 @@ return static function (ContainerConfigurator $configurator) {
         // ->args(['%kernel.project_dir%']);
 
     $services->alias(PersistenceFactoryInterface::class, PersistenceFactory::class);
-    $services->alias(PersistenceManagerInterface::class, PersistenceManager::class);
+    // $services->alias(PersistenceManagerInterface::class, PersistenceManager::class);
 
     $services->set(SourceReaderInterface::class)
         ->factory([service(PersistenceFactoryInterface::class), 'createSourceReader'])
