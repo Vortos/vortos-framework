@@ -13,7 +13,7 @@ class MongoUserFinder implements UserFinderInterface
         private ProjectionReaderInterface $projectionReader
     ) {}
 
-    public function findById(string $id): array
+    public function findById(string $id): ?array
     {
         $user = $this->projectionReader->get(self::COLLECTION, $id);
 

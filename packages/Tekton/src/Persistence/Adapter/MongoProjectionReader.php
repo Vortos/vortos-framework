@@ -12,7 +12,7 @@ class MongoProjectionReader implements ProjectionReaderInterface
     ){
     }
 
-    public function get(string $collection, string $id): array
+    public function get(string $collection, string $id): ?array
     {
         $result = $this->db->selectCollection($collection)->findOne(['_id'=> $id]);
         return $result ? (array) $result : [];
