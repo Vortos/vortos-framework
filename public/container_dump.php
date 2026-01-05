@@ -78,6 +78,7 @@ class CachedContainer extends Container
             'Fortizan\\Tekton\\Container\\Container' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Cqrs\\CommandHandlerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Cqrs\\QueryHandlerPass' => true,
+            'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Http\\HttpListenerCompilerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Http\\RegisterEventSubscribersPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Projection\\ProjectionHandlerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Route\\RouteCompilerPass' => true,

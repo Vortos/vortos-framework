@@ -10,7 +10,6 @@ $groupId = $argv[1] ?? throw new InvalidArgumentException("Missing group_id");
 $runner = new Runner(...$config, context: 'console');
 
 $container = $runner->setParameter('messenger.consumer.async.group_id', $groupId)
-    ->withRoutes(true)
     ->getContainer();
 
 $container->get('tekton.consumer')->run();

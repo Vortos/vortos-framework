@@ -33,6 +33,7 @@ return static function (ContainerConfigurator $configurator) {
 
     $services->set(RouterListener::class, RouterListener::class)
         ->args([new Reference(UrlMatcher::class), new Reference(RequestStack::class)])
-        ->tag('kernel.event_subscriber');
+        ->autoconfigure(false)
+        ->autowire(false);
 
 };

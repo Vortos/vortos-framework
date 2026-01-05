@@ -4,6 +4,8 @@ namespace Fortizan\Tekton\Foundation;
 
 use CachedContainer;
 use Fortizan\Tekton\Controller\ErrorController;
+use Fortizan\Tekton\DependencyInjection\Compiler\Http\HttpListenerCompilerPass;
+use Fortizan\Tekton\DependencyInjection\Compiler\Http\RegisterEventSubscribersPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Route\RouteCompilerPass;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Container;
@@ -112,6 +114,8 @@ class Runner
             }
 
             if ($this->withRoutes) {
+                $container->addCompilerPass(new HttpListenerCompilerPass());
+                $container->addCompilerPass(new RegisterEventSubscribersPass());
                 $container->addCompilerPass(new RouteCompilerPass());
             }
 
