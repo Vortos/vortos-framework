@@ -2,9 +2,10 @@
 
 use Fortizan\Tekton\Messenger\Consumer;
 use Fortizan\Tekton\Messenger\Factory\RuntimeTransportFactory;
+use Fortizan\Tekton\Messenger\Transport\Kafka\KafkaTransportFactory;
 use Fortizan\Tekton\Persistence\Registry\DoctrineConnectionRegistry;
-use Koco\Kafka\Messenger\KafkaTransportFactory;
 use Koco\Kafka\RdKafka\RdKafkaFactory;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpTransportFactory;
 use Symfony\Component\Messenger\Bridge\Doctrine\Transport\DoctrineTransportFactory;
@@ -55,7 +56,10 @@ return static function (ContainerConfigurator $configurator) {
     $services->set(RdKafkaFactory::class);
 
     $services->set('tekton.transport.factory.kafka', KafkaTransportFactory::class)
-        ->args([service(RdKafkaFactory::class)])
+        ->args([
+            service(RdKafkaFactory::class),
+            service(LoggerInterface::class)->nullOnInvalid()
+        ])
         ->tag('messenger.transport_factory');
 
     $services->set('tekton.transport.factory.amqp', AmqpTransportFactory::class)

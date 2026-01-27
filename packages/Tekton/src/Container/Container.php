@@ -38,12 +38,12 @@ $container->addCompilerPass(new QueryHandlerPass());
 $container->addCompilerPass(new CommandHandlerPass());
 $container->addCompilerPass(new MessengerPass());
 $container->addCompilerPass(new ProjectionHandlerPass());
-$container->addCompilerPass(new ConsumerHandlersMapCompilerPass());
-$container->addCompilerPass(new ConsumerTransportPass());
 $container->addCompilerPass(new EventAttributeCompilerPass());
 $container->addCompilerPass(new HttpListenerCompilerPass());
 $container->addCompilerPass(new RegisterEventSubscribersPass());
 $container->addCompilerPass(new RouteCompilerPass());
 $container->addCompilerPass(new SerializerCompilerPass());
+$container->addCompilerPass(new ConsumerHandlersMapCompilerPass());
+$container->addCompilerPass(new ConsumerTransportPass());
 
 return $container;

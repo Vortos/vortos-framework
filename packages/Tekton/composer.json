@@ -24,5 +24,8 @@
     "doctrine/orm": "^3.5",
     "doctrine/dbal": "^4.4",
     "symfony/cache": "^8.0"
+  },
+  "require-dev": {
+    "kwn/php-rdkafka-stubs": "*"
   }
 }

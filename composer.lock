@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b7c92aaf2528fdc4b0a73fa257e46590",
+    "content-hash": "c1a2d91b94a039653ae6ebaa95603a6f",
     "packages": [
         {
             "name": "doctrine/collections",
@@ -864,7 +864,7 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/Tekton",
-                "reference": "0bf16cb3671e69708a96856e7e26e2cb90cd690a"
+                "reference": "9b773a225011b3eef530a78e58c56e6ae58f42a8"
             },
             "require": {
                 "doctrine/dbal": "^4.4",
@@ -882,6 +882,9 @@
                 "symfony/monolog-bundle": "^4.0",
                 "symfony/routing": "^7.3",
                 "symfony/yaml": "^7.4"
+            },
+            "require-dev": {
+                "kwn/php-rdkafka-stubs": "*"
             },
             "type": "library",
             "autoload": {
@@ -4770,6 +4773,44 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "kwn/php-rdkafka-stubs",
+            "version": "v2.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kwn/php-rdkafka-stubs.git",
+                "reference": "23b865d6b3e8fe1f080aa7371dc1da3339361996"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kwn/php-rdkafka-stubs/zipball/23b865d6b3e8fe1f080aa7371dc1da3339361996",
+                "reference": "23b865d6b3e8fe1f080aa7371dc1da3339361996",
+                "shasum": ""
+            },
+            "require": {
+                "ext-rdkafka": ">=4.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^8.2.4"
+            },
+            "type": "library",
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Karol Wnuk",
+                    "email": "k.wnuk@ascetic.pl"
+                }
+            ],
+            "description": "Rdkafka extension stubs for your IDE",
+            "support": {
+                "issues": "https://github.com/kwn/php-rdkafka-stubs/issues",
+                "source": "https://github.com/kwn/php-rdkafka-stubs/tree/v2.2.1"
+            },
+            "time": "2022-08-16T15:27:51+00:00"
+        },
         {
             "name": "myclabs/deep-copy",
             "version": "1.13.4",

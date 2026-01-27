@@ -3,7 +3,7 @@
         'name' => 'fortizan/squaura',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => 'e634827dc5ce4ad4a326f2e726a0bf282ac93616',
+        'reference' => '1f19c20e1cc2f7f6275f4ba79c5752e6b6eb5ec0',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -103,7 +103,7 @@
         'fortizan/squaura' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => 'e634827dc5ce4ad4a326f2e726a0bf282ac93616',
+            'reference' => '1f19c20e1cc2f7f6275f4ba79c5752e6b6eb5ec0',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -112,7 +112,7 @@
         'fortizan/tekton' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '0bf16cb3671e69708a96856e7e26e2cb90cd690a',
+            'reference' => '9b773a225011b3eef530a78e58c56e6ae58f42a8',
             'type' => 'library',
             'install_path' => __DIR__ . '/../fortizan/tekton',
             'aliases' => array(),
@@ -126,6 +126,15 @@
             'install_path' => __DIR__ . '/../koco/messenger-kafka',
             'aliases' => array(),
             'dev_requirement' => false,
+        ),
+        'kwn/php-rdkafka-stubs' => array(
+            'pretty_version' => 'v2.2.1',
+            'version' => '2.2.1.0',
+            'reference' => '23b865d6b3e8fe1f080aa7371dc1da3339361996',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../kwn/php-rdkafka-stubs',
+            'aliases' => array(),
+            'dev_requirement' => true,
         ),
         'mongodb/builder' => array(
             'dev_requirement' => false,

@@ -40,13 +40,13 @@ class ConsumerTransportPass implements CompilerPassInterface
             }
         }
 
-        $topics = [];
-        foreach($eventsHandledByThisGroup as $eventClass){
+        $topicNames = [];
+        foreach ($eventsHandledByThisGroup as $eventClass) {
             $reflectionEventClass = new ReflectionClass($eventClass);
             $asEventAttribute = $reflectionEventClass->getAttributes(AsEvent::class);
             $attributeArgs = $asEventAttribute[0]->getArguments();
             $topic = $attributeArgs['topic'];
-            $topics[] = ['name' => $topic];
+            $topicNames[] = $topic;
         }
 
         $container->register('tekton.transport.consumer', TransportInterface::class)
@@ -54,7 +54,7 @@ class ConsumerTransportPass implements CompilerPassInterface
             ->setArguments([
                 $consumerTransport,
                 [
-                    'topic' => ['user.created', 'user.deleted'], #use reflection in handler methods to get event class from that get topic
+                    'topic' =>  $topicNames,
                     'kafka_conf' => [
                         'group.id' => $groupId,
                         'auto.offset.reset' => 'earliest'
