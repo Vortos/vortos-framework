@@ -1,12 +1,13 @@
 <?php
 
 use Fortizan\Tekton\DependencyInjection\Compiler\Bus\EventAttributeCompilerPass;
-use Fortizan\Tekton\DependencyInjection\Compiler\Consumer\ConsumerHandlersMapCompilerPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Cqrs\CommandHandlerPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Cqrs\QueryHandlerPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Http\HttpListenerCompilerPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Http\RegisterEventSubscribersPass;
-use Fortizan\Tekton\DependencyInjection\Compiler\Messenger\ConsumerTransportPass;
+use Fortizan\Tekton\DependencyInjection\Compiler\Messenger\Consumer\ConsumerHandlersMapCompilerPass;
+use Fortizan\Tekton\DependencyInjection\Compiler\Messenger\Consumer\ConsumerTransportPass;
+use Fortizan\Tekton\DependencyInjection\Compiler\Messenger\Producer\ProducerTopicMapCompilerPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Projection\ProjectionHandlerPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Route\RouteCompilerPass;
 use Fortizan\Tekton\DependencyInjection\Compiler\Serialize\SerializerCompilerPass;
@@ -45,5 +46,6 @@ $container->addCompilerPass(new RouteCompilerPass());
 $container->addCompilerPass(new SerializerCompilerPass());
 $container->addCompilerPass(new ConsumerHandlersMapCompilerPass());
 $container->addCompilerPass(new ConsumerTransportPass());
+$container->addCompilerPass(new ProducerTopicMapCompilerPass());
 
 return $container;

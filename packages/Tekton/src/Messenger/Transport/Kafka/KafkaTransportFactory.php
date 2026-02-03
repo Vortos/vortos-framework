@@ -6,6 +6,7 @@ namespace Fortizan\Tekton\Messenger\Transport\Kafka;
 
 use Koco\Kafka\Messenger\KafkaSenderProperties;
 use Fortizan\Tekton\Messenger\Transport\Kafka\KafkaTransport;
+use Fortizan\Tekton\Messenger\Transport\Kafka\Receive\KafkaReceiverProperties;
 use Koco\Kafka\RdKafka\RdKafkaFactory;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -80,7 +81,8 @@ class KafkaTransportFactory implements TransportFactoryInterface
                 $conf,
                 $topicName,
                 $options['receiveTimeout'] ?? 10000,
-                $options['commitAsync'] ?? false
+                $options['commitAsync'] ?? false,
+                (int) ($options['batch_size'] ?? 1)
             )
         );
     }

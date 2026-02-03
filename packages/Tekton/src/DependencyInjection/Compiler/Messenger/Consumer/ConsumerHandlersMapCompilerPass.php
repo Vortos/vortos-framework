@@ -1,6 +1,6 @@
 <?php
 
-namespace Fortizan\Tekton\DependencyInjection\Compiler\Consumer;
+namespace Fortizan\Tekton\DependencyInjection\Compiler\Messenger\Consumer;
 
 use Fortizan\Tekton\Messenger\Consumer;
 use ReflectionClass;

@@ -2,28 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Fortizan\Tekton\Messenger\Transport\Kafka;
+namespace Fortizan\Tekton\Messenger\Transport\Kafka\Receive;
 
 use RdKafka\Conf as KafkaConf;
 
 final class KafkaReceiverProperties
 {
-    private KafkaConf $kafkaConf;
-    private string|array $topicName;
-    private int $receiveTimeoutMs;
-    private bool $commitAsync;
 
     public function __construct(
-        KafkaConf $kafkaConf,
-        string|array $topicName,
-        int $receiveTimeoutMs,
-        bool $commitAsync
-    ) {
-        $this->kafkaConf = $kafkaConf;
-        $this->topicName = $topicName;
-        $this->receiveTimeoutMs = $receiveTimeoutMs;
-        $this->commitAsync = $commitAsync;
-    }
+        private KafkaConf $kafkaConf,
+        private string|array $topicName,
+        private int $receiveTimeoutMs,
+        private bool $commitAsync,
+        private int $batchSize,
+    ) {}
 
     public function getKafkaConf(): KafkaConf
     {
@@ -43,5 +35,10 @@ final class KafkaReceiverProperties
     public function isCommitAsync(): bool
     {
         return $this->commitAsync;
+    }
+
+    public function getBatchSize(): int
+    {
+        return $this->batchSize;
     }
 }

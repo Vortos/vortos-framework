@@ -1,9 +1,8 @@
 <?php
 
-declare(strict_types=1);
+namespace Fortizan\Tekton\Messenger\Transport\Kafka\Receive;
 
-namespace Fortizan\Tekton\Messenger\Transport\Kafka;
-
+use Fortizan\Tekton\Messenger\Transport\Kafka\Receive\KafkaReceiverProperties;
 use Koco\Kafka\Messenger\KafkaMessageStamp;
 use Koco\Kafka\RdKafka\RdKafkaFactory;
 use Psr\Log\LoggerInterface;
@@ -15,24 +14,15 @@ use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 
 class KafkaReceiver implements ReceiverInterface
 {
-    private LoggerInterface $logger;
-    private SerializerInterface $serializer;
-    private RdKafkaFactory $rdKafkaFactory;
-    private KafkaReceiverProperties $properties;
-    private ?KafkaConsumer $consumer = null;
-    private bool $subscribed = false;
+    private KafkaConsumer $consumer;
+    private bool $isSubscribed = false;
 
     public function __construct(
-        LoggerInterface $logger,
-        SerializerInterface $serializer,
-        RdKafkaFactory $rdKafkaFactory,
-        KafkaReceiverProperties $properties
-    ) {
-        $this->logger = $logger;
-        $this->serializer = $serializer;
-        $this->rdKafkaFactory = $rdKafkaFactory;
-        $this->properties = $properties;
-    }
+        private KafkaReceiverProperties $properties,
+        private SerializerInterface $serializer,
+        private RdKafkaFactory $rdkafkaFactory,
+        private LoggerInterface $logger
+    ) {}
 
     public function get(): iterable
     {
@@ -76,16 +66,13 @@ class KafkaReceiver implements ReceiverInterface
         return [];
     }
 
-    public function ack(Envelope $envelope): void
+    public function ack(Envelope $envelope): void 
     {
-        $consumer = $this->getConsumer();
-
-        /** @var KafkaMessageStamp $transportStamp */
-        $transportStamp = $envelope->last(KafkaMessageStamp::class);
-        $message = $transportStamp->getMessage();
+        $stamp = $envelope->last(KafkaMessageStamp::class);
+        $message = $stamp->getMessage();
 
         if ($this->properties->isCommitAsync()) {
-            $consumer->commitAsync($message);
+            $this->getConsumer()->commitAsync($message);
 
             $this->logger->info(sprintf(
                 'Offset topic=%s partition=%s offset=%s to be committed asynchronously.',
@@ -94,7 +81,7 @@ class KafkaReceiver implements ReceiverInterface
                 $message->offset
             ));
         } else {
-            $consumer->commit($message);
+            $this->getConsumer()->commit($message);
 
             $this->logger->info(sprintf(
                 'Offset topic=%s partition=%s offset=%s successfully committed.',
@@ -105,16 +92,13 @@ class KafkaReceiver implements ReceiverInterface
         }
     }
 
-    public function reject(Envelope $envelope): void
-    {
-        // Do nothing. auto commit should be set to false!
-    }
+    public function reject(Envelope $envelope): void {}
 
     private function getSubscribedConsumer(): KafkaConsumer
     {
         $consumer = $this->getConsumer();
 
-        if (false === $this->subscribed) {
+        if (false === $this->isSubscribed) {
             $topicName = $this->properties->getTopicName();
             $topics = is_array($topicName) ? $topicName : [$topicName];
 
@@ -124,7 +108,7 @@ class KafkaReceiver implements ReceiverInterface
             ));
 
             $consumer->subscribe($topics);
-            $this->subscribed = true;
+            $this->isSubscribed = true;
         }
 
         return $consumer;
@@ -132,6 +116,6 @@ class KafkaReceiver implements ReceiverInterface
 
     private function getConsumer(): KafkaConsumer
     {
-        return $this->consumer ?? $this->consumer = $this->rdKafkaFactory->createConsumer($this->properties->getKafkaConf());
+        return $this->consumer ?? $this->consumer = $this->rdkafkaFactory->createConsumer($this->properties->getKafkaConf());
     }
 }

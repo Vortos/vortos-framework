@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Fortizan\Tekton\Messenger\Transport\Kafka;
 
+use Fortizan\Tekton\Messenger\Transport\Kafka\Receive\KafkaReceiver;
+use Fortizan\Tekton\Messenger\Transport\Kafka\Receive\KafkaReceiverProperties;
 use Koco\Kafka\Messenger\KafkaSender;
 use Koco\Kafka\Messenger\KafkaSenderProperties;
 use Koco\Kafka\RdKafka\RdKafkaFactory;
@@ -25,7 +27,7 @@ class KafkaTransport implements TransportInterface
         KafkaReceiverProperties $receiverProperties
     ) {
         $this->sender = new KafkaSender($logger, $serializer, $rdKafkaFactory, $senderProperties);
-        $this->receiver = new KafkaReceiver($logger, $serializer, $rdKafkaFactory, $receiverProperties);
+        $this->receiver = new KafkaReceiver($receiverProperties, $serializer, $rdKafkaFactory, $logger);
     }
 
     public function get(): iterable

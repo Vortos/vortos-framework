@@ -1,6 +1,6 @@
 <?php
 
-namespace Fortizan\Tekton\DependencyInjection\Compiler\Messenger;
+namespace Fortizan\Tekton\DependencyInjection\Compiler\Messenger\Consumer;
 
 use Fortizan\Tekton\Bus\Event\Attribute\AsEvent;
 use Fortizan\Tekton\Messenger\Consumer;
@@ -20,7 +20,7 @@ class ConsumerTransportPass implements CompilerPassInterface
 
         $consumerDefinition = $container->getDefinition(Consumer::class);
         $handlersMap = $consumerDefinition->getArgument('$globalHandlerMap');
-        
+
         $groupsToTopicsMap = [];
         foreach ($handlersMap as $groupId => $groupData) {
 
@@ -44,7 +44,7 @@ class ConsumerTransportPass implements CompilerPassInterface
                         $eventClass
                     ));
                 }
-                
+
                 $topic = $attributeArgs['topic'];
                 $currentGroupTopics[] = $topic;
             }
@@ -61,10 +61,47 @@ class ConsumerTransportPass implements CompilerPassInterface
                 ->setArguments([
                     $consumerTransport,
                     [
-                        'topic' =>  $topics,
+                        // --- 1. Framework Logic Options ---
+                        // Who to listen to
+                        'topic' => $topics,
+
+                        // How long to block waiting for a message (ms). 
+                        // 10000ms (10s) is good to prevent CPU spinning.
+                        'receiveTimeout' => 10000,
+
+                        // How many messages to fetch before yielding (Prepare for batching)
+                        'batch_size' => 10,
+
+                        // Commit logic: 
+                        // false = Block until broker confirms (Safe/Slow). 
+                        // true = Fire and forget (Fast/Unsafe).
+                        'commitAsync' => false,
+
+                        // --- 2. Sender (Producer) Options ---
+                        // If this transport is also used to send messages (e.g. retries/DLQ)
+                        'flushTimeout' => 10000,
+                        'flushRetries' => 3,
+
+                        // --- 3. Driver Configuration (passed to RdKafka\Conf) ---
                         'kafka_conf' => [
                             'group.id' => $groupId,
-                            'auto.offset.reset' => 'earliest'
+
+                            // CRITICAL: We handle commits manually in ack(). 
+                            // If true, you lose data on crash.
+                            'enable.auto.commit' => 'false',
+
+                            // If no offset exists (new consumer), start at the BEGINNING.
+                            // 'latest' means you miss messages sent before you started.
+                            'auto.offset.reset' => 'earliest',
+
+                            // Optimizations (Optional but recommended for production)
+                            // 'fetch.min.bytes' => '1',
+                            // 'heartbeat.interval.ms' => '3000',
+                        ],
+
+                        // --- 4. Topic Configuration (Specific to topics) ---
+                        'topic_conf' => [
+                            // 'auto.commit.interval.ms' => '100', // Irrelevant if auto.commit is false
                         ]
                     ],
                     new Reference('tekton.messenger.serializer')

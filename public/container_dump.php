@@ -84,12 +84,13 @@ class CachedContainer extends Container
             'Fortizan\\Tekton\\Bus\\Query\\QueryBus' => true,
             'Fortizan\\Tekton\\Container\\Container' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Bus\\EventAttributeCompilerPass' => true,
-            'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Consumer\\ConsumerHandlersMapCompilerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Cqrs\\CommandHandlerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Cqrs\\QueryHandlerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Http\\HttpListenerCompilerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Http\\RegisterEventSubscribersPass' => true,
-            'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Messenger\\ConsumerTransportPass' => true,
+            'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Messenger\\Consumer\\ConsumerHandlersMapCompilerPass' => true,
+            'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Messenger\\Consumer\\ConsumerTransportPass' => true,
+            'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Messenger\\Producer\\ProducerTopicMapCompilerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Projection\\ProjectionHandlerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Route\\RouteCompilerPass' => true,
             'Fortizan\\Tekton\\DependencyInjection\\Compiler\\Serialize\\SerializerCompilerPass' => true,
@@ -106,10 +107,14 @@ class CachedContainer extends Container
             'Fortizan\\Tekton\\Messenger\\Consumer' => true,
             'Fortizan\\Tekton\\Messenger\\EventListener\\StopWorkerOnSignalSubscriber' => true,
             'Fortizan\\Tekton\\Messenger\\Factory\\RuntimeTransportFactory' => true,
-            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\KafkaReceiver' => true,
-            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\KafkaReceiverProperties' => true,
             'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\KafkaTransport' => true,
             'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\KafkaTransportFactory' => true,
+            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\Middleware\\TopicResolverMiddleware' => true,
+            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\Receive\\KafkaReceiver' => true,
+            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\Receive\\KafkaReceiverProperties' => true,
+            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\Send\\KafkaSender' => true,
+            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\Send\\KafkaSenderProperties' => true,
+            'Fortizan\\Tekton\\Messenger\\Transport\\Kafka\\Stamp\\KafkaTopicStamp' => true,
             'Fortizan\\Tekton\\Persistence\\Adapter\\DoctrineSourceReader' => true,
             'Fortizan\\Tekton\\Persistence\\Adapter\\DoctrineSourceWriter' => true,
             'Fortizan\\Tekton\\Persistence\\Adapter\\MongoProjectionReader' => true,
@@ -301,7 +306,7 @@ class CachedContainer extends Container
      */
     protected static function getTekton_Transport_Async_ConsumerService($container)
     {
-        return $container->services['tekton.transport.async.consumer'] = ($container->privates['tekton.transport.factory'] ?? self::getTekton_Transport_FactoryService($container))->createTransport('MESSENGER_TRANSPORT_ASYNC_CONSUMER_DSN', ['topic' => ['user.created'], 'kafka_conf' => ['group.id' => 'async', 'auto.offset.reset' => 'earliest']], ($container->privates['tekton.messenger.serializer'] ?? self::getTekton_Messenger_SerializerService($container)));
+        return $container->services['tekton.transport.async.consumer'] = ($container->privates['tekton.transport.factory'] ?? self::getTekton_Transport_FactoryService($container))->createTransport('MESSENGER_TRANSPORT_ASYNC_CONSUMER_DSN', ['topic' => ['user.created'], 'receiveTimeout' => 10000, 'batch_size' => 10, 'commitAsync' => false, 'flushTimeout' => 10000, 'flushRetries' => 3, 'kafka_conf' => ['group.id' => 'async', 'enable.auto.commit' => 'false', 'auto.offset.reset' => 'earliest'], 'topic_conf' => []], ($container->privates['tekton.messenger.serializer'] ?? self::getTekton_Messenger_SerializerService($container)));
     }
 
     /**
