@@ -22,6 +22,11 @@ final class HandlerRegistry
 {
     private array $handlers = [];
 
+    public function __construct(array $handlers = [])
+    {
+        $this->handlers = $handlers;
+    }
+
     /**
      * Register a handler descriptor for a consumer + event class combination.
      * Called exclusively by HandlerDiscoveryCompilerPass during container compilation.

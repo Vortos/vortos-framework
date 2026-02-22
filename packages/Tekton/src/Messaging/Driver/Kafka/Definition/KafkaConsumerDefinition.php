@@ -86,6 +86,7 @@ final class KafkaConsumerDefinition extends AbstractConsumerDefinition
     public function toArray(): array
     {
         return [
+            'transport' => $this->transportName,
             'groupId' => $this->groupId,
             'parallelism' => $this->parallelism,
             'batchSize' => $this->batchSize,

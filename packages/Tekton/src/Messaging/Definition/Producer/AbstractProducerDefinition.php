@@ -26,6 +26,12 @@ abstract class AbstractProducerDefinition
         $this->transportName = $transportName;
     }
 
+    /** The registered name of this producer. Used as the lookup key in the registry. */
+    public function getName():string
+    {
+        return $this->transportName;
+    }
+
     /** Named constructor. Always use this instead of new. */
     public static function create(string $transportName):static
     {
