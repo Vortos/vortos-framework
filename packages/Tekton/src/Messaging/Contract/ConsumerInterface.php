@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Fortizan\Tekton\Messaging\Contract;
 
+use Fortizan\Tekton\Messaging\ValueObject\ReceivedMessage;
+
 /**
  * Consumes messages from a named consumer pipeline.
  *

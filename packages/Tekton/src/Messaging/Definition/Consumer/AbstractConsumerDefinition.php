@@ -19,6 +19,7 @@ abstract class AbstractConsumerDefinition
     protected string $transportName;
     protected int $parallelism = 1;
     protected int $batchSize = 1;
+    protected bool $asyncCommit = true;
     protected array $retryPolicy = [];
     protected string $dlqTransport = '';
 
@@ -47,6 +48,18 @@ abstract class AbstractConsumerDefinition
     public function parallelism(int $count= 1):static
     {
         $this->parallelism = $count;
+        return $this;
+    }
+
+    /**
+     * Whether to commit offsets asynchronously (default: true).
+     * Async is recommended for high-throughput consumers — it does not block
+     * waiting for broker acknowledgement. Set to false only when you need
+     * guaranteed offset commits before processing the next message.
+     */
+    public function commitMode(bool $async = true):static
+    {
+        $this->asyncCommit = $async;
         return $this;
     }
 

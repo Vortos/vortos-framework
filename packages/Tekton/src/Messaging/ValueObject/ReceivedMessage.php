@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Fortizan\Tekton\Messaging\Runtime;
+namespace Fortizan\Tekton\Messaging\ValueObject;
 
 use DateTimeImmutable;
 

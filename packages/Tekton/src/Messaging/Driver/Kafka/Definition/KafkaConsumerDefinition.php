@@ -93,6 +93,7 @@ final class KafkaConsumerDefinition extends AbstractConsumerDefinition
             'retry' => $this->retryPolicy,
             'dlq' => $this->dlqTransport,
             'kafka' => [
+                'asyncCommit' => $this->asyncCommit,
                 'sessionTimeoutMs' => $this->sessionTimeoutMs,
                 'maxPollIntervalMs' => $this->maxPollIntervalMs,
                 'autoOffsetResetPolicy' => $this->autoOffsetResetPolicy,
