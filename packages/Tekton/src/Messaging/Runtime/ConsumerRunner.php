@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Fortizan\Tekton\Messaging\Runtime;
 
+use Fortizan\Tekton\Messaging\Attribute\Header\CorrelationId;
+use Fortizan\Tekton\Messaging\Attribute\Header\MessageId;
+use Fortizan\Tekton\Messaging\Attribute\Header\Timestamp;
 use Fortizan\Tekton\Messaging\Bus\Stamp\ConsumerStamp;
 use Fortizan\Tekton\Messaging\Bus\Stamp\CorrelationIdStamp;
 use Fortizan\Tekton\Messaging\Bus\Stamp\EventIdStamp;
+use Fortizan\Tekton\Messaging\Bus\Stamp\TimestampStamp;
 use Fortizan\Tekton\Messaging\Contract\ConsumerInterface;
 use Fortizan\Tekton\Messaging\DeadLetter\DeadLetterWriter;
 use Fortizan\Tekton\Messaging\Middleware\MiddlewareStack;
@@ -156,8 +160,7 @@ final class ConsumerRunner
         $handlerService = $this->container->get($descriptor['serviceId']);
 
         $handlerCallable = fn(Envelope $e) => $handlerService->{$descriptor['method']}(
-            $e->getMessage(),
-            // header params resolved separately — for now just pass the event
+            ...$this->resolveArguments($descriptor, $e)
         );
 
         try {
@@ -202,5 +205,27 @@ final class ConsumerRunner
 
             return false;
         }
+    }
+
+    private function resolveArguments(array $descriptor, Envelope $envelope): array
+    {
+        $args = [];
+
+        foreach ($descriptor['parameters'] as $param) {
+            if ($param['type'] === 'event') {
+                $args[] = $envelope->getMessage();
+                continue;
+            }
+
+            // header injection
+            $args[] = match ($param['attribute']) {
+                MessageId::class     => $envelope->last(EventIdStamp::class)?->eventId ?? '',
+                CorrelationId::class => $envelope->last(CorrelationIdStamp::class)?->correlationId ?? '',
+                Timestamp::class     => $envelope->last(TimestampStamp::class)?->occurredAt ?? new \DateTimeImmutable(),
+                default              => null,
+            };
+        }
+
+        return $args;
     }
 }

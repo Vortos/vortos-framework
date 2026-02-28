@@ -18,15 +18,15 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 final class HandlerDiscoveryCompilerPass implements CompilerPassInterface
 {
-    public function process(ContainerBuilder $container):void
+    public function process(ContainerBuilder $container): void
     {
-        if(!$container->hasParameter('tekton.handlers')){
+        if (!$container->hasParameter('tekton.handlers')) {
             $container->setParameter('tekton.handlers', []);
         }
 
         $taggedServices = $container->findTaggedServiceIds('tekton.event_handler');
 
-        foreach($taggedServices as $serviceId => $tags){
+        foreach ($taggedServices as $serviceId => $tags) {
             $containerDefinition = $container->getDefinition($serviceId);
             $className = $containerDefinition->getClass();
 
@@ -36,14 +36,14 @@ final class HandlerDiscoveryCompilerPass implements CompilerPassInterface
         }
     }
 
-    private function processHandlerClass(ContainerBuilder $container, string $serviceId, ReflectionClass $reflClass):void
+    private function processHandlerClass(ContainerBuilder $container, string $serviceId, ReflectionClass $reflClass): void
     {
         $classAttrs = $reflClass->getAttributes(AsEventHandler::class);
 
-        if(!empty($classAttrs)){
+        if (!empty($classAttrs)) {
             $attribute = $classAttrs[0]->newInstance();
 
-            if(!$reflClass->hasMethod('__invoke')){
+            if (!$reflClass->hasMethod('__invoke')) {
                 throw new LogicException(
                     "Class '{$reflClass->getName()}' has #[AsEventHandler] but no __invoke method"
                 );
@@ -56,15 +56,15 @@ final class HandlerDiscoveryCompilerPass implements CompilerPassInterface
 
         $methods = $reflClass->getMethods(ReflectionMethod::IS_PUBLIC);
 
-        foreach($methods as $method){
+        foreach ($methods as $method) {
 
             if (!empty($classAttrs) && $method->getName() === '__invoke') {
                 continue;
             }
-            
+
             $methodAttrs = $method->getAttributes(AsEventHandler::class);
 
-            foreach($methodAttrs as $attrRefl){
+            foreach ($methodAttrs as $attrRefl) {
                 $attribute = $attrRefl->newInstance();
 
                 $this->buildAndStoreDescriptor($container, $serviceId, $method, $attribute);
@@ -73,22 +73,30 @@ final class HandlerDiscoveryCompilerPass implements CompilerPassInterface
     }
 
     private function buildAndStoreDescriptor(
-        ContainerBuilder $container, 
-        string $serviceId, 
-        ReflectionMethod $method, 
+        ContainerBuilder $container,
+        string $serviceId,
+        ReflectionMethod $method,
         AsEventHandler $attribute
-    ):void
-    {
-        $eventClass = $this->resolveEventClass($method);
+    ): void {
+        $parameters = $this->resolveHandlerParameters($method);
+
+        if (empty($parameters) || $parameters[0]['type'] !== 'event') {
+            throw new LogicException(
+                "Handler '{$method->getDeclaringClass()->getName()}::{$method->getName()}' has no parameter implementing DomainEventInterface"
+            );
+        }
+
+        $eventClass = $parameters[0]['eventClass'];
 
         $descriptor = [
-            'handlerId' => $attribute->handlerId, 
-            'serviceId' => $serviceId, 
-            'method' => $method->getName(), 
-            'priority' => $attribute->priority, 
-            'idempotent' => $attribute->idempotent, 
-            'version' => $attribute->version, 
-            'eventClass' =>  $eventClass
+            'handlerId' => $attribute->handlerId,
+            'serviceId' => $serviceId,
+            'method' => $method->getName(),
+            'priority' => $attribute->priority,
+            'idempotent' => $attribute->idempotent,
+            'version' => $attribute->version,
+            'eventClass' =>  $eventClass,
+            'parameters' => $parameters
         ];
 
         $handlers = $container->getParameter('tekton.handlers');
@@ -97,45 +105,69 @@ final class HandlerDiscoveryCompilerPass implements CompilerPassInterface
         $container->setParameter('tekton.handlers', $handlers);
     }
 
-    private function resolveEventClass(ReflectionMethod $method): string
+    private function resolveHandlerParameters(ReflectionMethod $method): array
     {
-        foreach($method->getParameters() as $param){
+        $parameters = [];
+        foreach ($method->getParameters() as $param) {
 
-            if(!empty($param->getAttributes(CorrelationId::class)) || !empty($param->getAttributes(Timestamp::class)) || !empty($param->getAttributes(MessageId::class))){
-                continue;    
+            $headerAttrClasses = [
+                MessageId::class,
+                CorrelationId::class,
+                Timestamp::class,
+            ];
+
+            $headerFound = null;
+            foreach ($headerAttrClasses as $attrClass) {
+                if (!empty($param->getAttributes($attrClass))) {
+                    $headerFound = $attrClass;
+                    break;
+                }
             }
 
-            $type = $param->getType();
+            if ($headerFound !== null) {
+                $paramType = $param->getType()?->getName() ?? 'string';
+                $parameters[] = [
+                    'type'      => 'header',
+                    'attribute' => $headerFound,
+                    'paramType' => $paramType,
+                ];
+            } else {
 
-            if(!$type instanceof ReflectionNamedType){
-                continue;
+
+
+                $type = $param->getType();
+
+                if (!$type instanceof ReflectionNamedType) {
+                    continue;
+                }
+
+                if ($type->isBuiltin()) {
+                    continue;
+                }
+
+                $typeName = $type->getName();
+
+                if (!class_exists($typeName)) {
+                    throw new LogicException(
+                        "Parameter type '{$typeName}' in handler '{$method->getDeclaringClass()->getName()}::{$method->getName()}' does not exist"
+                    );
+                }
+
+                $reflEventClass = new ReflectionClass($typeName);
+
+                if (!$reflEventClass->implementsInterface(DomainEventInterface::class)) {
+                    throw new LogicException(
+                        "Parameter '{$typeName}' in handler '{$method->getDeclaringClass()->getName()}::{$method->getName()}' must implement DomainEventInterface"
+                    );
+                }
+
+                $parameters[] = [
+                    'type' => 'event',
+                    'eventClass' => $typeName,
+                ];
             }
-
-            if($type->isBuiltin()){
-                continue;
-            }
-
-            $typeName = $type->getName();
-
-            if(!class_exists($typeName)){
-                throw new LogicException(
-                    "Parameter type '{$typeName}' in handler '{$method->getDeclaringClass()->getName()}::{$method->getName()}' does not exist"
-                );
-            }
-
-            $reflEventClass = new ReflectionClass($typeName);
-
-            if(!$reflEventClass->implementsInterface(DomainEventInterface::class)){
-                throw new LogicException(
-                    "Parameter '{$typeName}' in handler '{$method->getDeclaringClass()->getName()}::{$method->getName()}' must implement DomainEventInterface"
-                );
-            }
-
-            return $typeName;
         }
 
-        throw new LogicException(
-            "Handler '{$method->getDeclaringClass()->getName()}::{$method->getName()}' has no parameter implementing DomainEventInterface"
-        );
+        return $parameters;
     }
 }
