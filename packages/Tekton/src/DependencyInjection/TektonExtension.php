@@ -10,6 +10,8 @@ use Fortizan\Tekton\Bus\Projection\Attribute\ProjectionHandler;
 use Fortizan\Tekton\Bus\Query\Attribute\AsQuery;
 use Fortizan\Tekton\Bus\Query\Attribute\QueryHandler;
 use Fortizan\Tekton\Messaging\Attribute\RegisterTransport;
+use Fortizan\Tekton\Messaging\DependencyInjection\MessagingExtension;
+use Fortizan\Tekton\Tracing\DependencyInjection\TracingExtension;
 use Monolog\Level;
 use ReflectionMethod;
 use Reflector;
@@ -35,7 +37,9 @@ class TektonExtension extends Extension
         $this->configureMonolog($container);
         $this->registerEventSubscribers($container);
         $this->registerProjectionAttributes($container);
-        $this->registerMessagingAttributes($container);
+
+        (new MessagingExtension())->load($configs, $container);
+        (new TracingExtension())->load($configs, $container);
     }
 
     private function configureMonolog(ContainerBuilder $container): void
@@ -166,35 +170,4 @@ class TektonExtension extends Extension
         );
     }
 
-    public function registerMessagingAttributes(ContainerBuilder $container):void
-    {
-        $container->registerAttributeForAutoconfiguration(
-            AsEventHandler::class,
-            static function (ChildDefinition $definition, AsEventHandler $attribute, Reflector $reflector) {
-
-                $tagAttributes = [
-                    'consumer' => $attribute->consumer,
-                    'priority' => $attribute->priority,
-                    'idempotent' => $attribute->idempotent,
-                    'version' => $attribute->version,
-                    'method' => null
-                ];
-
-                if ($reflector instanceof ReflectionMethod) {
-                    $tagAttributes['method'] = $reflector->getName();
-                }
-
-                $definition->addTag('tekton.event.handler', $tagAttributes);
-                $definition->setPublic(true);
-            }
-        );
-
-        $container->registerAttributeForAutoconfiguration(
-            RegisterTransport::class, 
-            static function (ChildDefinition $definition, RegisterTransport $attribute){
-                $definition->addTag('tekton.messenger.transport.definition');
-                $definition->setPublic(true);
-            }
-        );
-    }
 }

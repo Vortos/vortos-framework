@@ -1,0 +1,303 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Fortizan\Tekton\Messaging\DependencyInjection;
+
+use Fortizan\Tekton\Messaging\Attribute\AsEventHandler;
+use Fortizan\Tekton\Messaging\Attribute\MessagingConfig;
+use Fortizan\Tekton\Messaging\Attribute\RegisterTransport;
+use Fortizan\Tekton\Messaging\Bus\EventBus;
+use Fortizan\Tekton\Messaging\Command\ConsumeCommand;
+use Fortizan\Tekton\Messaging\Command\ListConsumersCommand;
+use Fortizan\Tekton\Messaging\Command\OutboxRelayCommand;
+use Fortizan\Tekton\Messaging\Contract\ConsumerInterface;
+use Fortizan\Tekton\Messaging\Contract\EventBusInterface;
+use Fortizan\Tekton\Messaging\Contract\OutboxInterface;
+use Fortizan\Tekton\Messaging\Contract\OutboxPollerInterface;
+use Fortizan\Tekton\Messaging\Contract\ProducerInterface;
+use Fortizan\Tekton\Messaging\DeadLetter\DeadLetterWriter;
+use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\HandlerDiscoveryCompilerPass;
+use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\MessagingConfigCompilerPass;
+use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\MiddlewareCompilerPass;
+use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\TransportRegistryCompilerPass;
+use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryBroker;
+use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryConsumer;
+use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryProducer;
+use Fortizan\Tekton\Messaging\Driver\Kafka\Runtime\KafkaConsumer;
+use Fortizan\Tekton\Messaging\Driver\Kafka\Runtime\KafkaProducer;
+use Fortizan\Tekton\Messaging\Middleware\Consumer\TransactionalMiddleware;
+use Fortizan\Tekton\Messaging\Middleware\Core\LoggingMiddleware;
+use Fortizan\Tekton\Messaging\Middleware\Core\TracingMiddleware;
+use Fortizan\Tekton\Messaging\Middleware\MiddlewareStack;
+use Fortizan\Tekton\Messaging\Outbox\OutboxPoller;
+use Fortizan\Tekton\Messaging\Outbox\OutboxRelayWorker;
+use Fortizan\Tekton\Messaging\Outbox\OutboxWriter;
+use Fortizan\Tekton\Messaging\Registry\ConsumerRegistry;
+use Fortizan\Tekton\Messaging\Registry\HandlerRegistry;
+use Fortizan\Tekton\Messaging\Registry\ProducerRegistry;
+use Fortizan\Tekton\Messaging\Registry\TransportRegistry;
+use Fortizan\Tekton\Messaging\Runtime\ConsumerRunner;
+use Fortizan\Tekton\Messaging\Runtime\OutboxRelayRunner;
+use Fortizan\Tekton\Messaging\Serializer\JsonSerializer;
+use Fortizan\Tekton\Messaging\Serializer\SerializerLocator;
+use ReflectionMethod;
+use Reflector;
+use Symfony\Component\DependencyInjection\ChildDefinition;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Reference;
+
+final class MessagingExtension extends Extension
+{
+    public function load(array $configs, ContainerBuilder $container)
+    {
+        if (!$container->hasParameter('tekton.event_producer_map')) {
+            $container->setParameter('tekton.event_producer_map', []);
+        }
+        if (!$container->hasParameter('tekton.handlers')) {
+            $container->setParameter('tekton.handlers', []);
+        }
+
+        $this->registerMessagingAttributes($container);
+        $this->registerMessagingConfigAttributes($container);
+        $this->registerRegistries($container);
+        $this->registerSerializers($container);
+        $this->registerMiddlewares($container);
+        $this->registerMiddlewareStack($container);
+        $this->registerOutbox($container);
+        $this->registerDeadLetterWriter($container);
+        $this->registerInMemoryDriver($container);
+        $this->registerKafkaDrivers($container);
+        $this->registerEventBus($container);
+        $this->registerConsumerRunner($container);
+        $this->registerCLICommands($container);
+        $this->registerDefaultDriverInterfaces($container);
+
+        $container->addCompilerPass(new MessagingConfigCompilerPass());
+        $container->addCompilerPass(new HandlerDiscoveryCompilerPass());
+        $container->addCompilerPass(new TransportRegistryCompilerPass());
+        $container->addCompilerPass(new MiddlewareCompilerPass());
+    }
+
+    private function registerDefaultDriverInterfaces(ContainerBuilder $container):void
+    {
+        $container->setAlias(ProducerInterface::class, KafkaProducer::class)
+            ->setPublic(false);
+
+        $container->setAlias(ConsumerInterface::class, KafkaConsumer::class)
+            ->setPublic(false);
+    }
+
+    private function registerCLICommands(ContainerBuilder $container):void
+    {
+        $container->register(ConsumeCommand::class, ConsumeCommand::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('console.command')
+            ->setPublic(false);
+
+        $container->register(OutboxRelayCommand::class, OutboxRelayCommand::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('console.command')
+            ->setPublic(false);
+
+        $container->register(ListConsumersCommand::class, ListConsumersCommand::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->addTag('console.command')
+            ->setPublic(false);
+    }
+
+    private function registerConsumerRunner(ContainerBuilder $container):void
+    {
+        $container->register(ConsumerRunner::class, ConsumerRunner::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+    }
+
+    private function registerEventBus(ContainerBuilder $container):void
+    {
+        $container->register(EventBus::class, EventBus::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setArgument('$eventProducerMap', '%tekton.event_producer_map%')
+            ->setPublic(false);
+
+        $container->setAlias(EventBusInterface::class, EventBus::class)
+            ->setPublic(true);
+    }
+
+    private function registerKafkaDrivers(ContainerBuilder $container):void
+    {
+        $container->register(KafkaProducer::class, KafkaProducer::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setShared(false)
+            ->setPublic(false);
+
+        $container->register(KafkaConsumer::class, KafkaConsumer::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setShared(false)
+            ->setPublic(false);
+    }
+
+    private function registerInMemoryDriver(ContainerBuilder $container):void
+    {
+        $container->register(InMemoryBroker::class, InMemoryBroker::class)
+            ->setShared(true)
+            ->setPublic(false);
+
+        $container->register(InMemoryProducer::class, InMemoryProducer::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+
+        $container->register(InMemoryConsumer::class, InMemoryConsumer::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+    }
+
+    private function registerDeadLetterWriter(ContainerBuilder $container):void
+    {
+        $container->register(DeadLetterWriter::class, DeadLetterWriter::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+    }
+
+    private function registerOutbox(ContainerBuilder $container):void
+    {
+        $container->register(OutboxWriter::class, OutboxWriter::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+
+        $container->setAlias(OutboxInterface::class, OutboxWriter::class)
+            ->setPublic(false);
+
+        $container->register(OutboxPoller::class, OutboxPoller::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+
+        $container->setAlias(OutboxPollerInterface::class, OutboxPoller::class)
+            ->setPublic(false);
+
+        $container->register(OutboxRelayWorker::class, OutboxRelayWorker::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+
+        $container->register(OutboxRelayRunner::class, OutboxRelayRunner::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+    }
+
+    private function registerMiddlewares(ContainerBuilder $container):void
+    {
+        $container->register(TracingMiddleware::class, TracingMiddleware::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
+        $container->register(LoggingMiddleware::class, LoggingMiddleware::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
+        $container->register(TransactionalMiddleware::class, TransactionalMiddleware::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+    }
+
+    private function registerMiddlewareStack(ContainerBuilder $container): void
+    {
+        $container->register(MiddlewareStack::class, MiddlewareStack::class)
+            ->setArgument('$middlewares', [
+                new Reference(TracingMiddleware::class),
+                new Reference(LoggingMiddleware::class),
+                new Reference(TransactionalMiddleware::class),
+            ])
+            ->setPublic(false);
+    }
+
+    private function registerSerializers(ContainerBuilder $container):void
+    {
+        $container->register(JsonSerializer::class, JsonSerializer::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true);
+
+        $container->register(SerializerLocator::class, SerializerLocator::class)
+            ->setArgument('$serializers', ['json' => new Reference(JsonSerializer::class)])
+            ->setPublic(false);
+    }
+
+    private function registerRegistries(ContainerBuilder $container):void
+    {
+        $container->register(TransportRegistry::class, TransportRegistry::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+
+        $container->register(ProducerRegistry::class, ProducerRegistry::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+
+        $container->register(ConsumerRegistry::class, ConsumerRegistry::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+
+        $container->register(HandlerRegistry::class, HandlerRegistry::class)
+            ->setAutowired(true)
+            ->setAutoconfigured(true)
+            ->setPublic(false);
+    }
+
+    private function registerMessagingConfigAttributes(ContainerBuilder $container):void
+    {
+        $container->registerAttributeForAutoconfiguration(
+            MessagingConfig::class,
+            static function (ChildDefinition $definition, MessagingConfig $attribute): void {
+                $definition->addTag('tekton.messaging_config');
+            }
+        );
+    }
+
+    private function registerMessagingAttributes(ContainerBuilder $container): void
+    {
+        $container->registerAttributeForAutoconfiguration(
+            AsEventHandler::class,
+            static function (ChildDefinition $definition, AsEventHandler $attribute, Reflector $reflector) {
+
+                $tagAttributes = [
+                    'consumer' => $attribute->consumer,
+                    'priority' => $attribute->priority,
+                    'idempotent' => $attribute->idempotent,
+                    'version' => $attribute->version,
+                    'method' => null
+                ];
+
+                if ($reflector instanceof ReflectionMethod) {
+                    $tagAttributes['method'] = $reflector->getName();
+                }
+
+                $definition->addTag('tekton.event_handler', $tagAttributes);
+                $definition->setPublic(true);
+            }
+        );
+
+        $container->registerAttributeForAutoconfiguration(
+            RegisterTransport::class,
+            static function (ChildDefinition $definition, RegisterTransport $attribute) {
+                $definition->addTag('tekton.messenger.transport.definition');
+                $definition->setPublic(true);
+            }
+        );
+    }
+}
