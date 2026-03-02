@@ -26,6 +26,11 @@
     "doctrine/dbal": "^4.4",
     "symfony/cache": "^8.0"
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Fortizan\\Tekton\\Messaging\\Testing\\": "src/Messaging/Testing/"
+    }
+  },
   "require-dev": {
     "kwn/php-rdkafka-stubs": "*",
     "open-telemetry/api": "^1.0"
