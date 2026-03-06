@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Fortizan\Tekton\Messaging\Driver\Kafka\Runtime;
 
 use Fortizan\Tekton\Messaging\Contract\ConsumerInterface;
-use Fortizan\Tekton\Messaging\Registry\ConsumerRegistry;
 use Fortizan\Tekton\Messaging\ValueObject\ReceivedMessage;
 use Psr\Log\LoggerInterface;
 use RdKafka\KafkaConsumer as RdKafkaConsumer;
@@ -25,29 +24,20 @@ use RdKafka\KafkaConsumer as RdKafkaConsumer;
  */
 final class KafkaConsumer implements ConsumerInterface
 {
-    private RdKafkaConsumer $rdConsumer;
-    private string $topic;
-    private ConsumerRegistry $consumerRegistry;
-    private LoggerInterface $logger;
-
     private bool $running = false;
-    private bool $asyncCommit = true;
 
-    public function __construct(RdKafkaConsumer $rdConsumer, string $topic, ConsumerRegistry $consumerRegistry, LoggerInterface $logger)
-    {
-        $this->rdConsumer = $rdConsumer;
-        $this->topic = $topic;
-        $this->consumerRegistry = $consumerRegistry;
-        $this->logger = $logger;
-    }
+    public function __construct(
+        private RdKafkaConsumer $rdConsumer,
+        private array $topics,
+        private bool $asyncCommit,
+        private LoggerInterface $logger,
+    ) {}
     
     public function consume(string $consumerName, callable $handler): void
     {
         $this->running = true;
 
-        $this->asyncCommit = $this->consumerRegistry->get($consumerName)->toArray()['kafka']['asyncCommit'] ?? true;
-
-        $this->rdConsumer->subscribe([$this->topic]);
+        $this->rdConsumer->subscribe($this->topics);
 
         while ($this->running) {
             $rdMessage = $this->rdConsumer->consume(500);

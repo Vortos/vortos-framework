@@ -25,6 +25,8 @@ use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\TransportRegistryComp
 use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryBroker;
 use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryConsumer;
 use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryProducer;
+use Fortizan\Tekton\Messaging\Driver\Kafka\Factory\KafkaConsumerFactory;
+use Fortizan\Tekton\Messaging\Driver\Kafka\Factory\KafkaProducerFactory;
 use Fortizan\Tekton\Messaging\Driver\Kafka\Runtime\KafkaConsumer;
 use Fortizan\Tekton\Messaging\Driver\Kafka\Runtime\KafkaProducer;
 use Fortizan\Tekton\Messaging\Hook\Attribute\AfterConsume;
@@ -145,8 +147,8 @@ final class MessagingExtension extends Extension
         $container->setAlias(ProducerInterface::class, KafkaProducer::class)
             ->setPublic(false);
 
-        $container->setAlias(ConsumerInterface::class, KafkaConsumer::class)
-            ->setPublic(false);
+        // $container->setAlias(ConsumerInterface::class, KafkaConsumer::class)
+        //     ->setPublic(false);
     }
 
     private function registerCLICommands(ContainerBuilder $container): void
@@ -203,10 +205,18 @@ final class MessagingExtension extends Extension
             ->setShared(false)
             ->setPublic(false);
 
-        $container->register(KafkaConsumer::class, KafkaConsumer::class)
+        // $container->register(KafkaConsumer::class, KafkaConsumer::class)
+        //     ->setAutowired(true)
+        //     ->setAutoconfigured(true)
+        //     ->setShared(false)
+        //     ->setPublic(false);
+
+        $container->register(KafkaProducerFactory::class, KafkaProducerFactory::class)
             ->setAutowired(true)
-            ->setAutoconfigured(true)
-            ->setShared(false)
+            ->setPublic(false);
+
+        $container->register(KafkaConsumerFactory::class, KafkaConsumerFactory::class)
+            ->setAutowired(true)
             ->setPublic(false);
     }
 
