@@ -19,7 +19,7 @@ use Fortizan\Tekton\Messaging\Definition\Consumer\AbstractConsumerDefinition;
  *       ->groupId('order-service')
  *       ->parallelism(4)
  *       ->batchSize(100)
- *       ->retry(['attempts' => 3, 'backoff' => 'exponential'])
+ *       ->retry(RetryPolicy::exponential(attempts: 3, initialDelayMs: 500))
  *       ->dlq('orders.placed.dlq')
  *       ->maxPollInterval(60000);
  */
@@ -90,7 +90,7 @@ final class KafkaConsumerDefinition extends AbstractConsumerDefinition
             'groupId' => $this->groupId,
             'parallelism' => $this->parallelism,
             'batchSize' => $this->batchSize,
-            'retry' => $this->retryPolicy,
+            'retry' => $this->retryPolicy?->toArray() ?? [],
             'dlq' => $this->dlqTransport,
             'kafka' => [
                 'asyncCommit' => $this->asyncCommit,

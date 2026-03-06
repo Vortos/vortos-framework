@@ -14,7 +14,10 @@ use Fortizan\Tekton\Messaging\Bus\Stamp\TimestampStamp;
 use Fortizan\Tekton\Messaging\Contract\ConsumerInterface;
 use Fortizan\Tekton\Messaging\DeadLetter\DeadLetterWriter;
 use Fortizan\Tekton\Messaging\Middleware\MiddlewareStack;
+use Fortizan\Tekton\Messaging\Registry\ConsumerRegistry;
 use Fortizan\Tekton\Messaging\Registry\HandlerRegistry;
+use Fortizan\Tekton\Messaging\Retry\RetryDecider;
+use Fortizan\Tekton\Messaging\Retry\RetryPolicy;
 use Fortizan\Tekton\Messaging\Serializer\SerializerLocator;
 use Fortizan\Tekton\Messaging\ValueObject\ReceivedMessage;
 use Psr\Log\LoggerInterface;
@@ -46,6 +49,8 @@ final class ConsumerRunner
         private ConsumerInterface $consumer,
         private LoggerInterface $logger,
         private ServiceLocator $handlerLocator,
+        private RetryDecider $retryDecider,
+        private ConsumerRegistry $consumerRegistry,
         private int $idempotencyTtl = 86400
     ) {}
 
@@ -58,7 +63,7 @@ final class ConsumerRunner
     }
 
     /** Stops the consumer loop. Called by signal handlers on SIGTERM/SIGINT. */
-    public function stop():void
+    public function stop(): void
     {
         $this->consumer->stop();
     }
@@ -129,7 +134,7 @@ final class ConsumerRunner
         $allSucceeded = true;
 
         foreach ($descriptors as $descriptor) {
-            $succeeded = $this->processHandler($descriptor, $envelope, $message);
+            $succeeded = $this->processHandler($consumerName, $descriptor, $envelope, $message);
 
             if (!$succeeded) {
                 $allSucceeded = false;
@@ -143,7 +148,7 @@ final class ConsumerRunner
         }
     }
 
-    private function processHandler(array $descriptor, Envelope $envelope, ReceivedMessage $message): bool
+    private function processHandler(string $consumerName, array $descriptor, Envelope $envelope, ReceivedMessage $message): bool
     {
         $eventId = $envelope->last(EventIdStamp::class)?->eventId ?? null;
 
@@ -173,23 +178,35 @@ final class ConsumerRunner
             return true;
         } catch (\Throwable $e) {
 
+            try {
+                $retryPolicy = $this->consumerRegistry->get($consumerName)->getRetryPolicy()
+                    ?? RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
+            } catch (\Throwable) {
+                $retryPolicy = RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
+            }
+
             $attempt = 1;
             $lastException = $e;
 
-            while ($attempt <= 3) {
-                sleep(1);
+            while ($this->retryDecider->shouldRetry($retryPolicy, $attempt)) {
+                $delay = $this->retryDecider->getDelayMs($retryPolicy, $attempt);
+
+                usleep($delay * 1000);
+
                 try {
                     $this->middlewareStack->process($envelope, $handlerCallable);
+
                     if ($eventId !== null) {
 
                         if (isset($cacheKey)) {
                             $this->cache->set($cacheKey, true, $this->idempotencyTtl);
                         }
                     }
+
                     return true;
-                } catch (\Throwable $retryException) {
+                } catch (\Throwable $e) {
                     $attempt++;
-                    $lastException = $retryException;
+                    $lastException = $e;
                 }
             }
 
@@ -200,7 +217,7 @@ final class ConsumerRunner
                 headers: $message->headers,
                 failureReason: $lastException->getMessage(),
                 exceptionClass: get_class($lastException),
-                attemptCount: 4  // 1 original + 3 retries
+                attemptCount: 1 + $retryPolicy->maxAttempts
             );
 
             return false;

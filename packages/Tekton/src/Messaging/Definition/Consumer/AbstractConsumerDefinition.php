@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Fortizan\Tekton\Messaging\Definition\Consumer;
 
+use Fortizan\Tekton\Messaging\Retry\RetryPolicy;
+
 /**
  * Base class for consumer definitions.
  *
@@ -20,7 +22,7 @@ abstract class AbstractConsumerDefinition
     protected int $parallelism = 1;
     protected int $batchSize = 1;
     protected bool $asyncCommit = true;
-    protected array $retryPolicy = [];
+    protected ?RetryPolicy $retryPolicy = null;
     protected string $dlqTransport = '';
 
     protected function __construct(string $transportName)
@@ -74,14 +76,18 @@ abstract class AbstractConsumerDefinition
     }
 
     /**
-     * Retry policy configuration array.
-     * Use RetryPolicy value object keys: attempts, backoff, initialDelayMs, maxDelayMs.
-     * Example: ['attempts' => 3, 'backoff' => 'exponential', 'initialDelayMs' => 500]
+     * Configures the retry policy for this consumer.
+     * Example: RetryPolicy::exponential(attempts: 3, initialDelayMs: 500)
      */
-    public function retry(array $policy):static
+    public function retry(RetryPolicy $policy):static
     {
         $this->retryPolicy = $policy;
         return $this;
+    }
+ 
+    public function getRetryPolicy():?RetryPolicy
+    {
+        return $this->retryPolicy;
     }
 
     /**
