@@ -4,7 +4,7 @@ namespace App\User\Application\Query\GetUser;
 
 use App\User\Application\Query\Contract\UserFinderInterface;
 use App\User\Domain\Exception\UserNotFoundException;
-use Fortizan\Tekton\Bus\Query\Attribute\QueryHandler;
+use Vortos\Bus\Query\Attribute\QueryHandler;
 
 #[QueryHandler]
 class GetUserQueryHandler

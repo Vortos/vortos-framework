@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\User\Representation\Controller;
 
 use App\User\Domain\Event\UserCreatedEvent;
-use Fortizan\Tekton\Attribute\ApiController;
-use Fortizan\Tekton\Messaging\Contract\EventBusInterface;
+use Vortos\Attribute\ApiController;
+use Vortos\Messaging\Contract\EventBusInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;

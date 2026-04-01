@@ -3,7 +3,7 @@
 namespace App\User\Infrastructure\Service;
 
 use App\User\Domain\Service\UserUniquenessCheckerInterface;
-use Fortizan\Tekton\Persistence\Contract\SourceReaderInterface;
+use Vortos\Persistence\Contract\SourceReaderInterface;
 
 class DbalUserUniquenessChecker implements UserUniquenessCheckerInterface
 {

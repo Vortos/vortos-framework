@@ -4,11 +4,11 @@ namespace App\User\Application\Projection;
 
 use App\User\Domain\Event\UserCreatedEvent;
 use App\User\Domain\Event\UserUpdatedEvent;
-use Fortizan\Tekton\Bus\Event\Attribute\AsEventHandler;
-use Fortizan\Tekton\Bus\Event\Attribute\EventHandler;
-use Fortizan\Tekton\Bus\Event\Attribute\Header;
-use Fortizan\Tekton\Bus\Projection\Attribute\ProjectionHandler;
-use Fortizan\Tekton\Persistence\Contract\ProjectionWriterInterface;
+use Vortos\Bus\Event\Attribute\AsEventHandler;
+use Vortos\Bus\Event\Attribute\EventHandler;
+use Vortos\Bus\Event\Attribute\Header;
+use Vortos\Bus\Projection\Attribute\ProjectionHandler;
+use Vortos\Persistence\Contract\ProjectionWriterInterface;
 use Psr\Log\LoggerInterface;
 
 // #[AsEventHandler(group: 'async')]

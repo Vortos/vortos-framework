@@ -6,14 +6,14 @@
   "repositories": [
     {
       "type": "path",
-      "url": "./packages/Tekton",
+      "url": "./packages/Vortos",
       "options": {
         "symlink": true
       }
     }
   ],
   "require": {
-    "fortizan/tekton": "@dev",
+    "vortos/vortos": "@dev",
     "doctrine/orm": "^3.5",
     "doctrine/dbal": "^4.4",
     "symfony/cache": "^8.0",

@@ -3,8 +3,8 @@
 namespace App\User\Representation\Controller;
 
 use App\User\Application\Query\GetUser\GetUserQuery;
-use Fortizan\Tekton\Attribute\ApiController;
-use Fortizan\Tekton\Bus\Query\QueryBus;
+use Vortos\Attribute\ApiController;
+use Vortos\Bus\Query\QueryBus;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;

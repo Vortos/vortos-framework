@@ -2,7 +2,7 @@
 
 namespace App\User\Application\Command\RegisterUser;
 
-use Fortizan\Tekton\Bus\Command\Contract\CommandInterface;
+use Vortos\Bus\Command\Contract\CommandInterface;
 
 readonly class RegisterUserCommand implements CommandInterface
 {

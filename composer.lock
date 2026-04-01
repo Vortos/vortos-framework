@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e46a039382189a103f4a0016755ca5a0",
+    "content-hash": "6c831363e14c72356e66e58698ebbd14",
     "packages": [
         {
             "name": "doctrine/collections",
@@ -856,62 +856,6 @@
                 }
             ],
             "time": "2025-10-16T20:13:18+00:00"
-        },
-        {
-            "name": "fortizan/tekton",
-            "version": "dev-main",
-            "dist": {
-                "type": "path",
-                "url": "./packages/Tekton",
-                "reference": "959b118d6ace316572c485a00a60a51e5d2eb3a4"
-            },
-            "require": {
-                "doctrine/dbal": "^4.4",
-                "doctrine/orm": "^3.5",
-                "monolog/monolog": "^3.0",
-                "php": ">=8.2",
-                "psr/log": "^3.0",
-                "psr/simple-cache": "^3.0",
-                "symfony/cache": "^8.0",
-                "symfony/config": "^7.3",
-                "symfony/console": "^7.3",
-                "symfony/dependency-injection": "^7.3",
-                "symfony/dotenv": "^8.0",
-                "symfony/event-dispatcher": "^7.3",
-                "symfony/http-foundation": "^7.3",
-                "symfony/http-kernel": "^7.3",
-                "symfony/messenger": "^7.3",
-                "symfony/routing": "^7.3",
-                "symfony/yaml": "^7.4"
-            },
-            "require-dev": {
-                "kwn/php-rdkafka-stubs": "*",
-                "open-telemetry/api": "^1.0"
-            },
-            "suggest": {
-                "ext-rdkafka": "Required for Kafka transport support",
-                "open-telemetry/api": "Required for OpenTelemetryTracer distributed tracing",
-                "open-telemetry/sdk": "Required for OpenTelemetry SDK instrumentation"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Fortizan\\Tekton\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "Fortizan\\Tekton\\Messaging\\Testing\\": "src/Messaging/Testing/"
-                }
-            },
-            "license": [
-                "MIT"
-            ],
-            "description": "The Fortizan Clean Architecture Framework",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
         },
         {
             "name": "koco/messenger-kafka",
@@ -4679,6 +4623,62 @@
                 }
             ],
             "time": "2026-02-09T09:33:46+00:00"
+        },
+        {
+            "name": "vortos/vortos",
+            "version": "dev-master",
+            "dist": {
+                "type": "path",
+                "url": "./packages/Vortos",
+                "reference": "5cda6336edb2943278fe6176b1e8391b3d3644a8"
+            },
+            "require": {
+                "doctrine/dbal": "^4.4",
+                "doctrine/orm": "^3.5",
+                "monolog/monolog": "^3.0",
+                "php": ">=8.2",
+                "psr/log": "^3.0",
+                "psr/simple-cache": "^3.0",
+                "symfony/cache": "^8.0",
+                "symfony/config": "^7.3",
+                "symfony/console": "^7.3",
+                "symfony/dependency-injection": "^7.3",
+                "symfony/dotenv": "^8.0",
+                "symfony/event-dispatcher": "^7.3",
+                "symfony/http-foundation": "^7.3",
+                "symfony/http-kernel": "^7.3",
+                "symfony/messenger": "^7.3",
+                "symfony/routing": "^7.3",
+                "symfony/yaml": "^7.4"
+            },
+            "require-dev": {
+                "kwn/php-rdkafka-stubs": "*",
+                "open-telemetry/api": "^1.0"
+            },
+            "suggest": {
+                "ext-rdkafka": "Required for Kafka transport support",
+                "open-telemetry/api": "Required for OpenTelemetryTracer distributed tracing",
+                "open-telemetry/sdk": "Required for OpenTelemetry SDK instrumentation"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Vortos\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Vortos\\Messaging\\Testing\\": "src/Messaging/Testing/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "The Vortos Clean Architecture Framework",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         }
     ],
     "packages-dev": [
@@ -6714,7 +6714,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "fortizan/tekton": 20
+        "vortos/vortos": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

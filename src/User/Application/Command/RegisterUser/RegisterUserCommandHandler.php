@@ -6,7 +6,7 @@ use App\User\Domain\Entity\User;
 use App\User\Domain\Exception\UserAlreadyExistException;
 use App\User\Domain\Repository\UserRepositoryInterface;
 use App\User\Domain\Service\UserUniquenessCheckerInterface;
-use Fortizan\Tekton\Bus\Command\Attribute\CommandHandler;
+use Vortos\Bus\Command\Attribute\CommandHandler;
 
 #[CommandHandler]
 class RegisterUserCommandHandler

@@ -2,7 +2,7 @@
 
 namespace App\User\Infrastructure\Query;
 
-use Fortizan\Tekton\Persistence\PersistenceManager;
+use Vortos\Persistence\PersistenceManager;
 
 class DbalUserFinder
 {

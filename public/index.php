@@ -2,7 +2,7 @@
 
 $config = require __DIR__ . '/../bootstrap/app.php';
 
-use Fortizan\Tekton\Foundation\Runner;
+use Vortos\Foundation\Runner;
 
 $runner = new Runner(...$config, context: 'http');
 

@@ -2,7 +2,7 @@
 
 namespace App\User\Application\Query\GetUser;
 
-use Fortizan\Tekton\Bus\Query\Contract\QueryInterface;
+use Vortos\Bus\Query\Contract\QueryInterface;
 
 class GetUserQuery implements QueryInterface
 {

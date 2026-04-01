@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\User\Application\EventHandler;
 
-use Fortizan\Tekton\Messaging\Contract\DomainEventInterface;
-use Fortizan\Tekton\Messaging\Hook\Attribute\BeforeConsume;
+use Vortos\Messaging\Contract\DomainEventInterface;
+use Vortos\Messaging\Hook\Attribute\BeforeConsume;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 

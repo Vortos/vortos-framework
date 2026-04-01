@@ -2,8 +2,8 @@
 
 namespace App\User\Representation\Controller;
 
-use Fortizan\Tekton\Attribute\ApiController;
-use Fortizan\Tekton\Http\Event\TestEvent;
+use Vortos\Attribute\ApiController;
+use Vortos\Http\Event\TestEvent;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

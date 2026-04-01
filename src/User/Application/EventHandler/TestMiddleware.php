@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\User\Application\EventHandler;
 
-use Fortizan\Tekton\Messaging\Attribute\AsMiddleware;
-use Fortizan\Tekton\Messaging\Middleware\MiddlewareInterface;
+use Vortos\Messaging\Attribute\AsMiddleware;
+use Vortos\Messaging\Middleware\MiddlewareInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 

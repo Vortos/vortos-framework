@@ -3,8 +3,8 @@
 namespace App\User\Domain\Event;
 
 use App\User\Infrastructure\Topics\UserTopics;
-use Fortizan\Tekton\Bus\Event\Attribute\AsEvent;
-use Fortizan\Tekton\Messaging\Contract\DomainEventInterface;
+use Vortos\Bus\Event\Attribute\AsEvent;
+use Vortos\Messaging\Contract\DomainEventInterface;
 use Symfony\Component\Uid\UuidV7;
 
 #[AsEvent(channel: 'async', topic: UserTopics::UserCreated, version: 'v5')]

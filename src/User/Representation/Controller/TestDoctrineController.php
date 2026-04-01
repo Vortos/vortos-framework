@@ -3,8 +3,8 @@
 namespace App\User\Representation\Controller;
 
 use App\User\Application\Command\RegisterUser\RegisterUserCommand;
-use Fortizan\Tekton\Attribute\ApiController;
-use Fortizan\Tekton\Bus\Command\CommandBus;
+use Vortos\Attribute\ApiController;
+use Vortos\Bus\Command\CommandBus;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;

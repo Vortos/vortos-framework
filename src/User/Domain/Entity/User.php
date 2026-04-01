@@ -9,8 +9,8 @@ use Doctrine\ORM\Mapping\Entity;
 use Doctrine\ORM\Mapping\GeneratedValue;
 use Doctrine\ORM\Mapping\Id;
 use Doctrine\ORM\Mapping\Table;
-use Fortizan\Tekton\Domain\AggregateRootInterface;
-use Fortizan\Tekton\Domain\AggregateRootTrait;
+use Vortos\Domain\AggregateRootInterface;
+use Vortos\Domain\AggregateRootTrait;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Uid\UuidV7;
 

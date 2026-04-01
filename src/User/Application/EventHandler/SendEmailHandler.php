@@ -6,7 +6,8 @@ namespace App\User\Application\EventHandler;
 
 use App\User\Domain\Event\UserCreatedEvent;
 use Doctrine\DBAL\Connection;
-use Fortizan\Tekton\Messaging\Attribute\AsEventHandler;
+use Exception;
+use Vortos\Messaging\Attribute\AsEventHandler;
 use Psr\Log\LoggerInterface;
 
 #[AsEventHandler(handlerId: 'user.created.handler', consumer: 'user.events', idempotent: true)]
@@ -28,6 +29,6 @@ final class SendEmailHandler
             'user_id' => (string) $event->id,
             'email'   => $event->email,
         ]);
-
+        throw new Exception("test test test test test test tset");
     }
 }

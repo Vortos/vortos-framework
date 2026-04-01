@@ -5,7 +5,7 @@ set_time_limit(0);
 
 $config = require __DIR__ . '/../bootstrap/app.php';
 
-use Fortizan\Tekton\Foundation\Runner;
+use Vortos\Foundation\Runner;
 
 $groupId = $argv[1] ?? throw new InvalidArgumentException("Missing group_id");
 
@@ -15,7 +15,7 @@ try {
     $container = $runner->getContainer();
 
     echo " [*] Messenger consumer worker started. Group: {$groupId}. Press Ctrl+C to stop.\n";
-    $container->get('tekton.consumer')->run($groupId);
+    $container->get('vortos.consumer')->run($groupId);
 } catch (\Throwable $e) {
     fwrite(STDERR, "Worker Error: " . $e->getMessage() . "\n");
     exit(1);

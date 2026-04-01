@@ -3,9 +3,9 @@
 namespace App\User\Representation\Controller;
 
 use App\User\Domain\Event\UserCreatedEvent;
-use Fortizan\Tekton\Attribute\ApiController;
-use Fortizan\Tekton\Messaging\Contract\EventBusInterface;
-use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryBroker;
+use Vortos\Attribute\ApiController;
+use Vortos\Messaging\Contract\EventBusInterface;
+use Vortos\Messaging\Driver\InMemory\Runtime\InMemoryBroker;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;

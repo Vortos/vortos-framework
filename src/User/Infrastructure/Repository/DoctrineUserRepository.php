@@ -5,7 +5,7 @@ namespace App\User\Infrastructure\Repository;
 use App\User\Domain\Entity\User;
 use App\User\Domain\Exception\UserNotFoundException;
 use App\User\Domain\Repository\UserRepositoryInterface;
-use Fortizan\Tekton\Persistence\Contract\SourceWriterInterface;
+use Vortos\Persistence\Contract\SourceWriterInterface;
 
 class DoctrineUserRepository implements UserRepositoryInterface
 {

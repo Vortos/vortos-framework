@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\User\Infrastructure;
 
 use App\User\Domain\Event\UserCreatedEvent;
-use Fortizan\Tekton\Messaging\Attribute\MessagingConfig;
-use Fortizan\Tekton\Messaging\Attribute\RegisterTransport;
-use Fortizan\Tekton\Messaging\Attribute\RegisterProducer;
-use Fortizan\Tekton\Messaging\Attribute\RegisterConsumer;
-use Fortizan\Tekton\Messaging\Driver\Kafka\Definition\KafkaTransportDefinition;
-use Fortizan\Tekton\Messaging\Driver\Kafka\Definition\KafkaProducerDefinition;
-use Fortizan\Tekton\Messaging\Driver\Kafka\Definition\KafkaConsumerDefinition;
-use Fortizan\Tekton\Messaging\Retry\RetryPolicy;
+use Vortos\Messaging\Attribute\MessagingConfig;
+use Vortos\Messaging\Attribute\RegisterTransport;
+use Vortos\Messaging\Attribute\RegisterProducer;
+use Vortos\Messaging\Attribute\RegisterConsumer;
+use Vortos\Messaging\Driver\Kafka\Definition\KafkaTransportDefinition;
+use Vortos\Messaging\Driver\Kafka\Definition\KafkaProducerDefinition;
+use Vortos\Messaging\Driver\Kafka\Definition\KafkaConsumerDefinition;
+use Vortos\Messaging\Retry\RetryPolicy;
 
 #[MessagingConfig]
 final class UserMessagingConfig

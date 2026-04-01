@@ -1,5 +1,5 @@
-# config/packages/tekton.yaml
-tekton:
+# config/packages/vortos.yaml
+vortos:
     kafka:
         # Global Cluster Config (Connection)
         brokers: '%env(KAFKA_BROKERS)%'

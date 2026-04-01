@@ -17,7 +17,7 @@ if(!$groupId){
     throw new InvalidArgumentException("Invalid kafka consumer group id");
 }
 
-$container = include __DIR__ . "/../packages/Tekton/src/Container/Container.php";
+$container = include __DIR__ . "/../packages/Vortos/src/Container/Container.php";
 $container->setParameter('message.consumer.group.id', $groupId);
 $container->compile();
 
@@ -34,7 +34,7 @@ $kafkaTransport = $kafkaFactory->createTransport(
     [
         'topic' => ['name' => 'events'],
         'kafka_conf' => [
-            'group.id' => 'tekton-consumer',
+            'group.id' => 'vortos-consumer',
             'auto.offset.reset' => 'earliest'
         ]
     ],

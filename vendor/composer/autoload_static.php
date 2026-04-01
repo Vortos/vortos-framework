@@ -27,6 +27,10 @@ class ComposerStaticInit3e5b847e212d2f2598a72bbffe95171d
     );
 
     public static $prefixLengthsPsr4 = array (
+        'V' =>
+        array (
+            'Vortos\\' => 7,
+        ),
         'S' =>
         array (
             'Symfony\\Polyfill\\Uuid\\' => 22,
@@ -93,10 +97,6 @@ class ComposerStaticInit3e5b847e212d2f2598a72bbffe95171d
         array (
             'Koco\\Kafka\\' => 11,
         ),
-        'F' =>
-        array (
-            'Fortizan\\Tekton\\' => 16,
-        ),
         'D' =>
         array (
             'Doctrine\\Persistence\\' => 21,
@@ -118,6 +118,10 @@ class ComposerStaticInit3e5b847e212d2f2598a72bbffe95171d
     );
 
     public static $prefixDirsPsr4 = array (
+        'Vortos\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/vortos/vortos/src',
+        ),
         'Symfony\\Polyfill\\Uuid\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-uuid',
@@ -322,10 +326,6 @@ class ComposerStaticInit3e5b847e212d2f2598a72bbffe95171d
         'Koco\\Kafka\\' =>
         array (
             0 => __DIR__ . '/..' . '/koco/messenger-kafka/src',
-        ),
-        'Fortizan\\Tekton\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/fortizan/tekton/src',
         ),
         'Doctrine\\Persistence\\' =>
         array (

@@ -3,7 +3,7 @@
 namespace App\User\Infrastructure\Query;
 
 use App\User\Application\Query\Contract\UserFinderInterface;
-use Fortizan\Tekton\Persistence\Contract\ProjectionReaderInterface;
+use Vortos\Persistence\Contract\ProjectionReaderInterface;
 
 class MongoUserFinder implements UserFinderInterface
 {

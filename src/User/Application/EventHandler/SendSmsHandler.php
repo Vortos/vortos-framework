@@ -3,7 +3,7 @@
 namespace App\User\Application\EventHandler;
 
 use App\User\Domain\Event\UserCreatedEvent;
-use Fortizan\Tekton\Bus\Event\Attribute\EventHandler;
+use Vortos\Bus\Event\Attribute\EventHandler;
 use Psr\Log\LoggerInterface;
 
 #[EventHandler(group:'async', retries:2, delay:2000)]
