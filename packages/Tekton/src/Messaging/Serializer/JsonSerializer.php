@@ -14,17 +14,6 @@ use ReflectionNamedType;
 use ReflectionProperty;
 use RuntimeException;
 
-/**
- * JSON serializer for domain events.
- *
- * Serializes all public properties to JSON, including a '_class' marker
- * for type identification. Deserializes via constructor reflection,
- * supporting nested value objects as long as they follow the same
- * constructor promotion pattern.
- *
- * For events with complex types (enums, custom collections, deeply nested
- * structures), implement a custom SerializerInterface instead.
- */
 final class JsonSerializer implements SerializerInterface
 {
     public function supports(string $format): bool
@@ -35,10 +24,11 @@ final class JsonSerializer implements SerializerInterface
     public function serialize(DomainEventInterface $event): string
     {
         $properties = new ReflectionClass($event)->getProperties(ReflectionProperty::IS_PUBLIC);
-
         $data = [];
+
         foreach ($properties as $property) {
-            $data[$property->getName()] = $property->getValue($event);
+            $value = $property->getValue($event);
+            $data[$property->getName()] = $value instanceof \Stringable ? (string) $value : $value;
         }
 
         $data['_class'] = get_class($event);
@@ -56,7 +46,6 @@ final class JsonSerializer implements SerializerInterface
     public function deserialize(string $payload, string $eventClass): DomainEventInterface
     {
         try {
-
             $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
             unset($data['_class']);
 
@@ -68,27 +57,30 @@ final class JsonSerializer implements SerializerInterface
             }
 
             $params = $constructor->getParameters();
-
             $args = [];
+
             foreach ($params as $param) {
                 $paramName = $param->getName();
 
                 if (isset($data[$paramName])) {
-
                     $paramType = $param->getType();
 
-                    if($paramType instanceof ReflectionNamedType &&
-                        !$paramType->isBuiltin() &&
-                        is_array($data[$paramName])){
-
+                    if ($paramType instanceof ReflectionNamedType && !$paramType->isBuiltin()) {
                         $nestedClass = $paramType->getName();
 
-                        $args[] = $this->deserialize(json_encode($data[$paramName]), $nestedClass);
-                    }else{
+                        if (is_array($data[$paramName])) {
+                            $args[] = $this->deserialize(json_encode($data[$paramName]), $nestedClass);
+                        } elseif (method_exists($nestedClass, 'fromString')) {
+                            $args[] = $nestedClass::fromString($data[$paramName]);
+                        } elseif (method_exists($nestedClass, 'fromRfc4122')) {
+                            $args[] = $nestedClass::fromRfc4122($data[$paramName]);
+                        } else {
+                            $args[] = new $nestedClass($data[$paramName]);
+                        }
+                    } else {
                         $args[] = $data[$paramName];
                     }
-
-                } else if ($param->isOptional()) {
+                } elseif ($param->isOptional()) {
                     $args[] = $param->getDefaultValue();
                 } else {
                     throw DeserializationException::forPayload(
@@ -99,8 +91,7 @@ final class JsonSerializer implements SerializerInterface
                 }
             }
 
-            $instance = $reflClass->newInstanceArgs($args);
-            return $instance;
+            return $reflClass->newInstanceArgs($args);
         } catch (\Throwable $e) {
             throw DeserializationException::forPayload($payload, $eventClass, $e);
         }

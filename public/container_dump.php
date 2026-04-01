@@ -23,8 +23,13 @@ class CachedContainer extends Container
 
         $this->services = $this->privates = [];
         $this->methodMap = [
+            'App\\User\\Application\\EventHandler\\LogConsumeHook' => 'getLogConsumeHookService',
+            'App\\User\\Application\\EventHandler\\LogDispatchHook' => 'getLogDispatchHookService',
+            'App\\User\\Application\\EventHandler\\SendEmailHandler' => 'getSendEmailHandlerService',
+            'App\\User\\Application\\EventHandler\\TestMiddleware' => 'getTestMiddlewareService',
             'App\\User\\Representation\\Controller\\CreateAnEventController' => 'getCreateAnEventControllerService',
             'App\\User\\Representation\\Controller\\TestDoctrineController' => 'getTestDoctrineControllerService',
+            'App\\User\\Representation\\Controller\\TestInMemoryController' => 'getTestInMemoryControllerService',
             'App\\User\\Representation\\Controller\\TestMongoController' => 'getTestMongoControllerService',
             'App\\User\\Representation\\Controller\\TestPublishController' => 'getTestPublishControllerService',
             'Fortizan\\Tekton\\Controller\\ErrorController' => 'getErrorControllerService',
@@ -61,7 +66,6 @@ class CachedContainer extends Container
             'App\\Shared\\Infrastructure\\Database\\Migrations\\Version20251228051847' => true,
             'App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommand' => true,
             'App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommandHandler' => true,
-            'App\\User\\Application\\EventHandler\\SendEmailHandler' => true,
             'App\\User\\Application\\EventHandler\\SendSmsHandler' => true,
             'App\\User\\Application\\Projection\\UserProjector' => true,
             'App\\User\\Application\\Query\\Contract\\UserFinderInterface' => true,
@@ -145,6 +149,7 @@ class CachedContainer extends Container
             'Fortizan\\Tekton\\Messaging\\Contract\\ProducerInterface' => true,
             'Fortizan\\Tekton\\Messaging\\Contract\\SerializerInterface' => true,
             'Fortizan\\Tekton\\Messaging\\DeadLetter\\DeadLetterMessage' => true,
+            'Fortizan\\Tekton\\Messaging\\DeadLetter\\DeadLetterRepository' => true,
             'Fortizan\\Tekton\\Messaging\\DeadLetter\\DeadLetterWriter' => true,
             'Fortizan\\Tekton\\Messaging\\Definition\\Transport\\TransportDefinitionFactoryInterface' => true,
             'Fortizan\\Tekton\\Messaging\\DependencyInjection\\Compiler\\HandlerDiscoveryCompilerPass' => true,
@@ -289,11 +294,12 @@ class CachedContainer extends Container
             'tekton.bus.query.locator' => true,
             'tekton.bus.query.messenger.handlers_locator' => true,
             'tekton.bus.query.middleware' => true,
-            'tekton.cache.array' => true,
-            'tekton.cache.pool' => true,
+            'tekton.cache.psr16' => true,
+            'tekton.cache.redis' => true,
             'tekton.handler_locator' => true,
             'tekton.hook_locator' => true,
             'tekton.messenger.serializer' => true,
+            'tekton.redis_client' => true,
             'tekton.serializer.standard' => true,
             'tekton.transport.consumer' => true,
             'tekton.transport.factory' => true,
@@ -302,6 +308,46 @@ class CachedContainer extends Container
             'tekton.transport.factory.kafka' => true,
             'tekton.transport.factory.redis' => true,
         ];
+    }
+
+    /**
+     * Gets the public 'App\User\Application\EventHandler\LogConsumeHook' shared autowired service.
+     *
+     * @return \App\User\Application\EventHandler\LogConsumeHook
+     */
+    protected static function getLogConsumeHookService($container)
+    {
+        return $container->services['App\\User\\Application\\EventHandler\\LogConsumeHook'] = new \App\User\Application\EventHandler\LogConsumeHook(($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)));
+    }
+
+    /**
+     * Gets the public 'App\User\Application\EventHandler\LogDispatchHook' shared autowired service.
+     *
+     * @return \App\User\Application\EventHandler\LogDispatchHook
+     */
+    protected static function getLogDispatchHookService($container)
+    {
+        return $container->services['App\\User\\Application\\EventHandler\\LogDispatchHook'] = new \App\User\Application\EventHandler\LogDispatchHook(($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)));
+    }
+
+    /**
+     * Gets the public 'App\User\Application\EventHandler\SendEmailHandler' shared autowired service.
+     *
+     * @return \App\User\Application\EventHandler\SendEmailHandler
+     */
+    protected static function getSendEmailHandlerService($container)
+    {
+        return $container->services['App\\User\\Application\\EventHandler\\SendEmailHandler'] = new \App\User\Application\EventHandler\SendEmailHandler(($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)), ($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container)));
+    }
+
+    /**
+     * Gets the public 'App\User\Application\EventHandler\TestMiddleware' shared autowired service.
+     *
+     * @return \App\User\Application\EventHandler\TestMiddleware
+     */
+    protected static function getTestMiddlewareService($container)
+    {
+        return $container->services['App\\User\\Application\\EventHandler\\TestMiddleware'] = new \App\User\Application\EventHandler\TestMiddleware(($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)));
     }
 
     /**
@@ -324,6 +370,16 @@ class CachedContainer extends Container
         $a = ($container->privates['Fortizan\\Tekton\\Persistence\\PersistenceFactory'] ??= new \Fortizan\Tekton\Persistence\PersistenceFactory('/var/www/html'));
 
         return $container->services['App\\User\\Representation\\Controller\\TestDoctrineController'] = new \App\User\Representation\Controller\TestDoctrineController(new \Fortizan\Tekton\Bus\Command\CommandBus(new \Symfony\Component\Messenger\MessageBus([new \Symfony\Component\Messenger\Middleware\HandleMessageMiddleware(new \Symfony\Component\Messenger\Handler\HandlersLocator(['App\\User\\Application\\Command\\RegisterUser\\RegisterUserCommand' => [new \App\User\Application\Command\RegisterUser\RegisterUserCommandHandler(new \App\User\Infrastructure\Repository\DoctrineUserRepository($a->createSourceWriter(($container->privates['tekton.bus.event'] ?? self::getTekton_Bus_EventService($container)), [], [], true)), new \App\User\Infrastructure\Service\DbalUserUniquenessChecker($a->createSourceReader([], true)))]]))])));
+    }
+
+    /**
+     * Gets the public 'App\User\Representation\Controller\TestInMemoryController' shared autowired service.
+     *
+     * @return \App\User\Representation\Controller\TestInMemoryController
+     */
+    protected static function getTestInMemoryControllerService($container)
+    {
+        return $container->services['App\\User\\Representation\\Controller\\TestInMemoryController'] = new \App\User\Representation\Controller\TestInMemoryController(($container->services['Fortizan\\Tekton\\Messaging\\Contract\\EventBusInterface'] ?? self::getEventBusInterfaceService($container)), new \Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryBroker());
     }
 
     /**
@@ -365,9 +421,14 @@ class CachedContainer extends Container
     {
         $a = ($container->services['Fortizan\\Tekton\\Tracing\\Contract\\TracingInterface'] ??= new \Fortizan\Tekton\Tracing\NoOpTracer());
         $b = ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container));
-        $c = ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\ConsumerRegistry'] ?? self::getConsumerRegistryService($container));
+        $c = ($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container));
+        $d = ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\ConsumerRegistry'] ?? self::getConsumerRegistryService($container));
 
-        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\ConsumeCommand'] = new \Fortizan\Tekton\Messaging\Command\ConsumeCommand(new \Fortizan\Tekton\Messaging\Runtime\ConsumerRunner(($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\HandlerRegistry'] ??= new \Fortizan\Tekton\Messaging\Registry\HandlerRegistry([])), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container)), new \Fortizan\Tekton\Messaging\Middleware\MiddlewareStack([new \Fortizan\Tekton\Messaging\Middleware\Core\TracingMiddleware($a), new \Fortizan\Tekton\Messaging\Middleware\Core\LoggingMiddleware($b), new \Fortizan\Tekton\Messaging\Middleware\Core\HookMiddleware(($container->privates['Fortizan\\Tekton\\Messaging\\Hook\\HookRunner'] ?? self::getHookRunnerService($container))), new \Fortizan\Tekton\Messaging\Middleware\Consumer\TransactionalMiddleware(($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container)))]), new \Fortizan\Tekton\Messaging\DeadLetter\DeadLetterWriter($b), new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\ArrayAdapter()), new \Fortizan\Tekton\Messaging\Runtime\ConsumerLocator(new \Fortizan\Tekton\Messaging\Driver\Kafka\Factory\KafkaConsumerFactory($c, ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\TransportRegistry'] ?? self::getTransportRegistryService($container)), $b, $a)), $b, new \Symfony\Component\DependencyInjection\ServiceLocator([]), new \Fortizan\Tekton\Messaging\Retry\RetryDecider(new \Fortizan\Tekton\Messaging\Retry\RetryDelayCalculator()), $c), $b);
+        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\ConsumeCommand'] = new \Fortizan\Tekton\Messaging\Command\ConsumeCommand(new \Fortizan\Tekton\Messaging\Runtime\ConsumerRunner(($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\HandlerRegistry'] ?? self::getHandlerRegistryService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container)), new \Fortizan\Tekton\Messaging\Middleware\MiddlewareStack([new \Fortizan\Tekton\Messaging\Middleware\Core\TracingMiddleware($a), new \Fortizan\Tekton\Messaging\Middleware\Core\LoggingMiddleware($b), new \Fortizan\Tekton\Messaging\Middleware\Core\HookMiddleware(($container->privates['Fortizan\\Tekton\\Messaging\\Hook\\HookRunner'] ?? self::getHookRunnerService($container))), new \Fortizan\Tekton\Messaging\Middleware\Consumer\TransactionalMiddleware($c), ($container->services['App\\User\\Application\\EventHandler\\TestMiddleware'] ?? self::getTestMiddlewareService($container))]), new \Fortizan\Tekton\Messaging\DeadLetter\DeadLetterWriter($c, $b), new \Symfony\Component\Cache\Psr16Cache(new \Symfony\Component\Cache\Adapter\RedisAdapter(\Symfony\Component\Cache\Adapter\RedisAdapter::createConnection('redis://redis:6379'), 'tekton_messaging', 86400)), new \Fortizan\Tekton\Messaging\Runtime\ConsumerLocator(new \Fortizan\Tekton\Messaging\Driver\Kafka\Factory\KafkaConsumerFactory($d, ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\TransportRegistry'] ?? self::getTransportRegistryService($container)), $b, $a)), $b, new \Symfony\Component\DependencyInjection\Argument\ServiceLocator($container->getService ??= $container->getService(...), [
+            'App\\User\\Application\\EventHandler\\SendEmailHandler' => ['services', 'App\\User\\Application\\EventHandler\\SendEmailHandler', 'getSendEmailHandlerService', false],
+        ], [
+            'App\\User\\Application\\EventHandler\\SendEmailHandler' => '?',
+        ]), new \Fortizan\Tekton\Messaging\Retry\RetryDecider(new \Fortizan\Tekton\Messaging\Retry\RetryDelayCalculator()), $d), $b);
     }
 
     /**
@@ -377,7 +438,7 @@ class CachedContainer extends Container
      */
     protected static function getListConsumersCommandService($container)
     {
-        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\ListConsumersCommand'] = new \Fortizan\Tekton\Messaging\Command\ListConsumersCommand(($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\HandlerRegistry'] ??= new \Fortizan\Tekton\Messaging\Registry\HandlerRegistry([])), ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\ConsumerRegistry'] ?? self::getConsumerRegistryService($container)));
+        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\ListConsumersCommand'] = new \Fortizan\Tekton\Messaging\Command\ListConsumersCommand(($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\HandlerRegistry'] ?? self::getHandlerRegistryService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\ConsumerRegistry'] ?? self::getConsumerRegistryService($container)));
     }
 
     /**
@@ -399,7 +460,7 @@ class CachedContainer extends Container
     {
         $a = ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container));
 
-        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\OutboxRelayCommand'] = new \Fortizan\Tekton\Messaging\Command\OutboxRelayCommand(new \Fortizan\Tekton\Messaging\Runtime\OutboxRelayRunner(new \Fortizan\Tekton\Messaging\Outbox\OutboxRelayWorker(($container->privates['Fortizan\\Tekton\\Messaging\\Outbox\\OutboxPoller'] ?? self::getOutboxPollerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Driver\\Kafka\\Runtime\\LazyKafkaProducer'] ?? self::getLazyKafkaProducerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container)), $a, ($container->services['Fortizan\\Tekton\\Tracing\\Contract\\TracingInterface'] ??= new \Fortizan\Tekton\Tracing\NoOpTracer()))), $a);
+        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\OutboxRelayCommand'] = new \Fortizan\Tekton\Messaging\Command\OutboxRelayCommand(new \Fortizan\Tekton\Messaging\Runtime\OutboxRelayRunner(new \Fortizan\Tekton\Messaging\Outbox\OutboxRelayWorker(new \Fortizan\Tekton\Messaging\Outbox\OutboxPoller(($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container))), ($container->privates['Fortizan\\Tekton\\Messaging\\Driver\\Kafka\\Runtime\\LazyKafkaProducer'] ?? self::getLazyKafkaProducerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container)), $a, ($container->services['Fortizan\\Tekton\\Tracing\\Contract\\TracingInterface'] ??= new \Fortizan\Tekton\Tracing\NoOpTracer()))), $a);
     }
 
     /**
@@ -409,7 +470,7 @@ class CachedContainer extends Container
      */
     protected static function getReplayDeadLetterCommandService($container)
     {
-        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\ReplayDeadLetterCommand'] = new \Fortizan\Tekton\Messaging\Command\ReplayDeadLetterCommand(($container->privates['Fortizan\\Tekton\\Messaging\\Outbox\\OutboxPoller'] ?? self::getOutboxPollerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Driver\\Kafka\\Runtime\\LazyKafkaProducer'] ?? self::getLazyKafkaProducerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container)), ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)));
+        return $container->services['Fortizan\\Tekton\\Messaging\\Command\\ReplayDeadLetterCommand'] = new \Fortizan\Tekton\Messaging\Command\ReplayDeadLetterCommand(new \Fortizan\Tekton\Messaging\DeadLetter\DeadLetterRepository(($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container))), ($container->privates['Fortizan\\Tekton\\Messaging\\Driver\\Kafka\\Runtime\\LazyKafkaProducer'] ?? self::getLazyKafkaProducerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container)), ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)));
     }
 
     /**
@@ -419,7 +480,7 @@ class CachedContainer extends Container
      */
     protected static function getEventBusInterfaceService($container)
     {
-        return $container->services['Fortizan\\Tekton\\Messaging\\Contract\\EventBusInterface'] = new \Fortizan\Tekton\Messaging\Bus\EventBus(($container->privates['tekton.bus.event'] ?? self::getTekton_Bus_EventService($container)), new \Fortizan\Tekton\Messaging\Outbox\OutboxWriter(($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container))), ($container->privates['Fortizan\\Tekton\\Messaging\\Driver\\Kafka\\Runtime\\LazyKafkaProducer'] ?? self::getLazyKafkaProducerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\HandlerRegistry'] ??= new \Fortizan\Tekton\Messaging\Registry\HandlerRegistry([])), ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\ProducerRegistry'] ?? self::getProducerRegistryService($container)), $container->parameters['tekton.event_producer_map'], ($container->privates['Fortizan\\Tekton\\Messaging\\Hook\\HookRunner'] ?? self::getHookRunnerService($container)), ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)), ($container->services['Fortizan\\Tekton\\Tracing\\Contract\\TracingInterface'] ??= new \Fortizan\Tekton\Tracing\NoOpTracer()));
+        return $container->services['Fortizan\\Tekton\\Messaging\\Contract\\EventBusInterface'] = new \Fortizan\Tekton\Messaging\Bus\EventBus(($container->privates['tekton.bus.event'] ?? self::getTekton_Bus_EventService($container)), new \Fortizan\Tekton\Messaging\Outbox\OutboxWriter(($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Serializer\\SerializerLocator'] ?? self::getSerializerLocatorService($container))), ($container->privates['Fortizan\\Tekton\\Messaging\\Driver\\Kafka\\Runtime\\LazyKafkaProducer'] ?? self::getLazyKafkaProducerService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\HandlerRegistry'] ?? self::getHandlerRegistryService($container)), ($container->privates['Fortizan\\Tekton\\Messaging\\Registry\\ProducerRegistry'] ?? self::getProducerRegistryService($container)), $container->parameters['tekton.event_producer_map'], ($container->privates['Fortizan\\Tekton\\Messaging\\Hook\\HookRunner'] ?? self::getHookRunnerService($container)), ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)), ($container->services['Fortizan\\Tekton\\Tracing\\Contract\\TracingInterface'] ??= new \Fortizan\Tekton\Tracing\NoOpTracer()));
     }
 
     /**
@@ -467,7 +528,7 @@ class CachedContainer extends Container
      */
     protected static function getRouteCollectionService($container)
     {
-        return $container->services['Symfony\\Component\\Routing\\RouteCollection'] = \Fortizan\Tekton\DependencyInjection\Compiler\Route\RouteCompilerPass::createRouteCollection('O:41:"Symfony\\Component\\Routing\\RouteCollection":4:{s:49:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'routes";a:4:{s:10:"user.event";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:11:"/user/event";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:68:"App\\User\\Representation\\Controller\\CreateAnEventController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:0:{}s:9:"condition";s:0:"";s:8:"compiled";N;}s:7:"user.db";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:11:"/user/write";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:67:"App\\User\\Representation\\Controller\\TestDoctrineController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:0:{}s:9:"condition";s:0:"";s:8:"compiled";N;}s:10:"user.mongo";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:10:"/user/read";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:64:"App\\User\\Representation\\Controller\\TestMongoController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:0:{}s:9:"condition";s:0:"";s:8:"compiled";N;}s:65:"app_user_representation_controller_testpublishcontroller___invoke";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:13:"/test/publish";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:66:"App\\User\\Representation\\Controller\\TestPublishController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:1:{i:0;s:3:"GET";}s:9:"condition";s:0:"";s:8:"compiled";N;}}s:50:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'aliases";a:8:{s:58:"App\\User\\Representation\\Controller\\CreateAnEventController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.event";}s:68:"App\\User\\Representation\\Controller\\CreateAnEventController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.event";}s:57:"App\\User\\Representation\\Controller\\TestDoctrineController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:7:"user.db";}s:67:"App\\User\\Representation\\Controller\\TestDoctrineController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:7:"user.db";}s:54:"App\\User\\Representation\\Controller\\TestMongoController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.mongo";}s:64:"App\\User\\Representation\\Controller\\TestMongoController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.mongo";}s:56:"App\\User\\Representation\\Controller\\TestPublishController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:65:"app_user_representation_controller_testpublishcontroller___invoke";}s:66:"App\\User\\Representation\\Controller\\TestPublishController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:65:"app_user_representation_controller_testpublishcontroller___invoke";}}s:52:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'resources";a:4:{s:69:"reflection.App\\User\\Representation\\Controller\\CreateAnEventController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:76:"/var/www/html/src/User/Representation/Controller/CreateAnEventController.php";N;}s:9:"className";s:58:"App\\User\\Representation\\Controller\\CreateAnEventController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"e1a5dc49f665a1f4f251e606fa8b592d";}s:68:"reflection.App\\User\\Representation\\Controller\\TestDoctrineController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:75:"/var/www/html/src/User/Representation/Controller/TestDoctrineController.php";N;}s:9:"className";s:57:"App\\User\\Representation\\Controller\\TestDoctrineController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"f001ded5df435f4011f7524c1b842248";}s:65:"reflection.App\\User\\Representation\\Controller\\TestMongoController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:72:"/var/www/html/src/User/Representation/Controller/TestMongoController.php";N;}s:9:"className";s:54:"App\\User\\Representation\\Controller\\TestMongoController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"3679d50307bbe3ea284ab84062f0b2af";}s:67:"reflection.App\\User\\Representation\\Controller\\TestPublishController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:74:"/var/www/html/src/User/Representation/Controller/TestPublishController.php";N;}s:9:"className";s:56:"App\\User\\Representation\\Controller\\TestPublishController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"5c924565a76112b06d4f80bf90fd53ff";}}s:53:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'priorities";a:0:{}}');
+        return $container->services['Symfony\\Component\\Routing\\RouteCollection'] = \Fortizan\Tekton\DependencyInjection\Compiler\Route\RouteCompilerPass::createRouteCollection('O:41:"Symfony\\Component\\Routing\\RouteCollection":4:{s:49:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'routes";a:5:{s:10:"user.event";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:11:"/user/event";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:68:"App\\User\\Representation\\Controller\\CreateAnEventController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:0:{}s:9:"condition";s:0:"";s:8:"compiled";N;}s:7:"user.db";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:11:"/user/write";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:67:"App\\User\\Representation\\Controller\\TestDoctrineController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:0:{}s:9:"condition";s:0:"";s:8:"compiled";N;}s:66:"app_user_representation_controller_testinmemorycontroller___invoke";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:14:"/test/inmemory";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:67:"App\\User\\Representation\\Controller\\TestInMemoryController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:1:{i:0;s:3:"GET";}s:9:"condition";s:0:"";s:8:"compiled";N;}s:10:"user.mongo";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:10:"/user/read";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:64:"App\\User\\Representation\\Controller\\TestMongoController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:0:{}s:9:"condition";s:0:"";s:8:"compiled";N;}s:65:"app_user_representation_controller_testpublishcontroller___invoke";O:31:"Symfony\\Component\\Routing\\Route":9:{s:4:"path";s:13:"/test/publish";s:4:"host";s:0:"";s:8:"defaults";a:1:{s:11:"_controller";s:66:"App\\User\\Representation\\Controller\\TestPublishController::__invoke";}s:12:"requirements";a:0:{}s:7:"options";a:1:{s:14:"compiler_class";s:39:"Symfony\\Component\\Routing\\RouteCompiler";}s:7:"schemes";a:0:{}s:7:"methods";a:1:{i:0;s:3:"GET";}s:9:"condition";s:0:"";s:8:"compiled";N;}}s:50:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'aliases";a:10:{s:58:"App\\User\\Representation\\Controller\\CreateAnEventController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.event";}s:68:"App\\User\\Representation\\Controller\\CreateAnEventController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.event";}s:57:"App\\User\\Representation\\Controller\\TestDoctrineController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:7:"user.db";}s:67:"App\\User\\Representation\\Controller\\TestDoctrineController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:7:"user.db";}s:57:"App\\User\\Representation\\Controller\\TestInMemoryController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:66:"app_user_representation_controller_testinmemorycontroller___invoke";}s:67:"App\\User\\Representation\\Controller\\TestInMemoryController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:66:"app_user_representation_controller_testinmemorycontroller___invoke";}s:54:"App\\User\\Representation\\Controller\\TestMongoController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.mongo";}s:64:"App\\User\\Representation\\Controller\\TestMongoController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:10:"user.mongo";}s:56:"App\\User\\Representation\\Controller\\TestPublishController";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:65:"app_user_representation_controller_testpublishcontroller___invoke";}s:66:"App\\User\\Representation\\Controller\\TestPublishController::__invoke";O:31:"Symfony\\Component\\Routing\\Alias":2:{s:44:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'deprecation";a:0:{}s:35:"' . "\0" . 'Symfony\\Component\\Routing\\Alias' . "\0" . 'id";s:65:"app_user_representation_controller_testpublishcontroller___invoke";}}s:52:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'resources";a:5:{s:69:"reflection.App\\User\\Representation\\Controller\\CreateAnEventController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:76:"/var/www/html/src/User/Representation/Controller/CreateAnEventController.php";N;}s:9:"className";s:58:"App\\User\\Representation\\Controller\\CreateAnEventController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"e1a5dc49f665a1f4f251e606fa8b592d";}s:68:"reflection.App\\User\\Representation\\Controller\\TestDoctrineController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:75:"/var/www/html/src/User/Representation/Controller/TestDoctrineController.php";N;}s:9:"className";s:57:"App\\User\\Representation\\Controller\\TestDoctrineController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"f001ded5df435f4011f7524c1b842248";}s:68:"reflection.App\\User\\Representation\\Controller\\TestInMemoryController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:75:"/var/www/html/src/User/Representation/Controller/TestInMemoryController.php";N;}s:9:"className";s:57:"App\\User\\Representation\\Controller\\TestInMemoryController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"a52704572de256dec677f3293c658a81";}s:65:"reflection.App\\User\\Representation\\Controller\\TestMongoController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:72:"/var/www/html/src/User/Representation/Controller/TestMongoController.php";N;}s:9:"className";s:54:"App\\User\\Representation\\Controller\\TestMongoController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"3679d50307bbe3ea284ab84062f0b2af";}s:67:"reflection.App\\User\\Representation\\Controller\\TestPublishController";O:57:"Symfony\\Component\\Config\\Resource\\ReflectionClassResource":4:{s:5:"files";a:1:{s:74:"/var/www/html/src/User/Representation/Controller/TestPublishController.php";N;}s:9:"className";s:56:"App\\User\\Representation\\Controller\\TestPublishController";s:15:"excludedVendors";a:0:{}s:4:"hash";s:32:"5c924565a76112b06d4f80bf90fd53ff";}}s:53:"' . "\0" . 'Symfony\\Component\\Routing\\RouteCollection' . "\0" . 'priorities";a:0:{}}');
     }
 
     /**
@@ -517,17 +578,7 @@ class CachedContainer extends Container
      */
     protected static function getHookRunnerService($container)
     {
-        return $container->privates['Fortizan\\Tekton\\Messaging\\Hook\\HookRunner'] = new \Fortizan\Tekton\Messaging\Hook\HookRunner(new \Fortizan\Tekton\Messaging\Hook\HookRegistry([]), new \Symfony\Component\DependencyInjection\ServiceLocator([]), ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)));
-    }
-
-    /**
-     * Gets the private 'Fortizan\Tekton\Messaging\Outbox\OutboxPoller' shared autowired service.
-     *
-     * @return \Fortizan\Tekton\Messaging\Outbox\OutboxPoller
-     */
-    protected static function getOutboxPollerService($container)
-    {
-        return $container->privates['Fortizan\\Tekton\\Messaging\\Outbox\\OutboxPoller'] = new \Fortizan\Tekton\Messaging\Outbox\OutboxPoller(($container->privates['Doctrine\\DBAL\\Connection'] ?? self::getConnectionService($container)));
+        return $container->privates['Fortizan\\Tekton\\Messaging\\Hook\\HookRunner'] = new \Fortizan\Tekton\Messaging\Hook\HookRunner(new \Fortizan\Tekton\Messaging\Hook\HookRegistry($container->parameters['tekton.hooks']), new \Symfony\Component\DependencyInjection\ServiceLocator(['App\\User\\Application\\EventHandler\\LogConsumeHook' => #[\Closure(name: 'App\\User\\Application\\EventHandler\\LogConsumeHook')] fn () => ($container->services['App\\User\\Application\\EventHandler\\LogConsumeHook'] ?? self::getLogConsumeHookService($container)), 'App\\User\\Application\\EventHandler\\LogDispatchHook' => #[\Closure(name: 'App\\User\\Application\\EventHandler\\LogDispatchHook')] fn () => ($container->services['App\\User\\Application\\EventHandler\\LogDispatchHook'] ?? self::getLogDispatchHookService($container))]), ($container->privates['monolog.logger'] ?? self::getMonolog_LoggerService($container)));
     }
 
     /**
@@ -538,6 +589,16 @@ class CachedContainer extends Container
     protected static function getConsumerRegistryService($container)
     {
         return $container->privates['Fortizan\\Tekton\\Messaging\\Registry\\ConsumerRegistry'] = new \Fortizan\Tekton\Messaging\Registry\ConsumerRegistry($container->parameters['tekton.consumers']);
+    }
+
+    /**
+     * Gets the private 'Fortizan\Tekton\Messaging\Registry\HandlerRegistry' shared service.
+     *
+     * @return \Fortizan\Tekton\Messaging\Registry\HandlerRegistry
+     */
+    protected static function getHandlerRegistryService($container)
+    {
+        return $container->privates['Fortizan\\Tekton\\Messaging\\Registry\\HandlerRegistry'] = new \Fortizan\Tekton\Messaging\Registry\HandlerRegistry($container->parameters['tekton.handlers']);
     }
 
     /**
@@ -692,10 +753,47 @@ class CachedContainer extends Container
                 'App\\User\\Domain\\Event\\UserCreatedEvent' => 'user.events',
             ],
             'tekton.handlers' => [
-
+                'user.events' => [
+                    'App\\User\\Domain\\Event\\UserCreatedEvent' => [
+                        0 => [
+                            'handlerId' => 'user.created.handler',
+                            'serviceId' => 'App\\User\\Application\\EventHandler\\SendEmailHandler',
+                            'method' => '__invoke',
+                            'priority' => 0,
+                            'idempotent' => true,
+                            'version' => NULL,
+                            'eventClass' => 'App\\User\\Domain\\Event\\UserCreatedEvent',
+                            'parameters' => [
+                                0 => [
+                                    'type' => 'event',
+                                    'eventClass' => 'App\\User\\Domain\\Event\\UserCreatedEvent',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ],
             'tekton.hooks' => [
-
+                'before_consume' => [
+                    0 => [
+                        'hookType' => 'before_consume',
+                        'serviceId' => 'App\\User\\Application\\EventHandler\\LogConsumeHook',
+                        'eventFilter' => NULL,
+                        'consumerFilter' => NULL,
+                        'priority' => 0,
+                        'onFailureOnly' => false,
+                    ],
+                ],
+                'before_dispatch' => [
+                    0 => [
+                        'hookType' => 'before_dispatch',
+                        'serviceId' => 'App\\User\\Application\\EventHandler\\LogDispatchHook',
+                        'eventFilter' => NULL,
+                        'consumerFilter' => NULL,
+                        'priority' => 0,
+                        'onFailureOnly' => false,
+                    ],
+                ],
             ],
             'tekton.transports' => [
                 'user.events' => [

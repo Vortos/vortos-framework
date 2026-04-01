@@ -32,15 +32,16 @@ final class TransactionalMiddleware implements MiddlewareInterface
     public function handle(Envelope $envelope, callable $next): Envelope
     {
         $this->connection->beginTransaction();
-        
         try {
             $result = $next($envelope);
-
-            $this->connection->commit();
-
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->commit();
+            }
             return $result;
         } catch (Throwable $e) {
-            $this->connection->rollBack();
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->rollBack();
+            }
             throw $e;
         }
     }

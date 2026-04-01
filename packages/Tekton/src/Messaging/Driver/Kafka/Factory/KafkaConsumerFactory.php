@@ -31,7 +31,6 @@ final class KafkaConsumerFactory
     public function create(string $consumerName): KafkaConsumer
     {
         $consumerConfig = $this->consumerRegistry->get($consumerName);
-
         $transportConfig = $this->transportRegistry->get($consumerConfig['transport']);
 
         $conf = new \RdKafka\Conf();

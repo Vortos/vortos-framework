@@ -166,12 +166,15 @@ final class ConsumerRunner
                 return true;
             }
         }
-
+       
         $handlerService = $this->handlerLocator->get($descriptor['serviceId']);
 
-        $handlerCallable = fn(Envelope $e) => $handlerService->{$descriptor['method']}(
-            ...$this->resolveArguments($descriptor, $e)
-        );
+        $handlerCallable = function (Envelope $e) use ($handlerService, $descriptor): Envelope {
+            $handlerService->{$descriptor['method']}(
+                ...$this->resolveArguments($descriptor, $e)
+            );
+            return $e;
+        };
 
         try {
             $this->middlewareStack->process($envelope, $handlerCallable);
@@ -184,8 +187,11 @@ final class ConsumerRunner
         } catch (\Throwable $e) {
 
             try {
-                $retryPolicy = $this->consumerRegistry->get($consumerName)->getRetryPolicy()
-                    ?? RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
+                $consumerConfig = $this->consumerRegistry->get($consumerName);
+                $retryArray = $consumerConfig['retry'] ?? [];
+                $retryPolicy = !empty($retryArray)
+                    ? RetryPolicy::fromArray($retryArray)
+                    : RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
             } catch (\Throwable) {
                 $retryPolicy = RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
             }

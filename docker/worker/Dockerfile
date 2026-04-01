@@ -6,6 +6,8 @@ RUN pecl install redis mongodb rdkafka amqp \
     && docker-php-ext-enable redis mongodb rdkafka amqp \
     && docker-php-ext-install pdo pdo_pgsql pcntl
 
+RUN mkdir -p /var/log/supervisor
+
 COPY docker/worker/supervisord.conf /etc/supervisord.conf
 
 WORKDIR /var/www/html

@@ -12,6 +12,7 @@ use Fortizan\Tekton\Messaging\Hook\Attribute\PreSend;
 use Fortizan\Tekton\Messaging\Hook\HookDescriptor;
 use LogicException;
 use ReflectionClass;
+use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -47,22 +48,22 @@ final class HookDiscoveryCompilerPass implements CompilerPassInterface
                 foreach ($reflClass->getAttributes($attributeClass) as $attrRefl) {
                     $attr = $attrRefl->newInstance();
 
-                    $hooksByType[$hookType][] = new HookDescriptor(
-                        hookType: $hookType,
-                        serviceId: $serviceId,
-                        eventFilter: $attr->event ?? null,
-                        consumerFilter: $attr->consumer ?? null,
-                        priority: $attr->priority,
-                        onFailureOnly: $attr->onFailureOnly ?? false,
-                    );
+                    $hooksByType[$hookType][] = [
+                        'hookType'       => $hookType,
+                        'serviceId'      => $serviceId,
+                        'eventFilter'    => $attr->event ?? null,
+                        'consumerFilter' => $attr->consumer ?? null,
+                        'priority'       => $attr->priority,
+                        'onFailureOnly'  => $attr->onFailureOnly ?? false,
+                    ];
                 }
             }
 
-            $hookServices[$serviceId] = new Reference($serviceId);
+            $hookServices[$serviceId] = new ServiceClosureArgument(new Reference($serviceId));
         }
 
         foreach ($hooksByType as $type => $descriptors) {
-            usort($descriptors, fn($a, $b) => $b->priority <=> $a->priority);
+            usort($descriptors, fn($a, $b) => $b['priority'] <=> $a['priority']);
             $hooksByType[$type] = $descriptors;
         }
 
@@ -74,10 +75,10 @@ final class HookDiscoveryCompilerPass implements CompilerPassInterface
 
     private function validateHookClass(ReflectionClass $reflClass): void
     {
-        if (!$reflClass->hasMethod('handle')) {
+        if (!$reflClass->hasMethod('__invoke')) {
             throw new LogicException(
                 sprintf(
-                    "Hook class '%s' is tagged as tekton.hook but has no handle() method.",
+                    "Hook class '%s' is tagged as tekton.hook but has no __invoke() method.",
                     $reflClass->getName()
                 )
             );

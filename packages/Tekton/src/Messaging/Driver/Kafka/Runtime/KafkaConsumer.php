@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fortizan\Tekton\Messaging\Driver\Kafka\Runtime;
 
+use App\User\Application\EventHandler\SendEmailHandler;
 use Fortizan\Tekton\Messaging\Contract\ConsumerInterface;
 use Fortizan\Tekton\Messaging\ValueObject\ReceivedMessage;
 use Fortizan\Tekton\Tracing\Contract\TracingInterface;
@@ -46,7 +47,7 @@ final class KafkaConsumer implements ConsumerInterface
 
             if ($rdMessage->err === RD_KAFKA_RESP_ERR_NO_ERROR) {
                 $this->tracer->extractContext($rdMessage->headers ?? []);
-                
+          
                 $handler(
                     KafkaMessage::fromRdKafkaMessage($rdMessage)
                         ->toReceivedMessage($consumerName)

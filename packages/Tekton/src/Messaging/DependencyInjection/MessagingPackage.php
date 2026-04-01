@@ -24,8 +24,8 @@ final class MessagingPackage implements PackageInterface
     public function build(ContainerBuilder $container): void
     {
         $container->addCompilerPass(new MessagingConfigCompilerPass());
-        $container->addCompilerPass(new TransportRegistryCompilerPass());
         $container->addCompilerPass(new HandlerDiscoveryCompilerPass());
+        $container->addCompilerPass(new TransportRegistryCompilerPass());
         $container->addCompilerPass(new MiddlewareCompilerPass());
         $container->addCompilerPass(new HookDiscoveryCompilerPass());
     }

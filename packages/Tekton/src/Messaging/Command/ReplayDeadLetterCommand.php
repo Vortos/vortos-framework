@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Fortizan\Tekton\Messaging\Command;
 
-use Fortizan\Tekton\Messaging\Contract\OutboxPollerInterface;
 use Fortizan\Tekton\Messaging\Contract\ProducerInterface;
+use Fortizan\Tekton\Messaging\DeadLetter\DeadLetterRepository;
 use Fortizan\Tekton\Messaging\Serializer\SerializerLocator;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -29,7 +29,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ReplayDeadLetterCommand extends Command
 {
     public function __construct(
-        private OutboxPollerInterface $poller,
+        private DeadLetterRepository $repository,
         private ProducerInterface $producer,
         private SerializerLocator $serializerLocator,
         private LoggerInterface $logger
@@ -48,28 +48,25 @@ final class ReplayDeadLetterCommand extends Command
         $limit  = (int) $input->getOption('limit');
         $dryRun = (bool) $input->getOption('dry-run');
 
-        $messages = $this->poller->fetchFailed($limit);
+        $rows = $this->repository->fetchFailed($limit);
 
-        if (empty($messages)) {
+        if (empty($rows)) {
             $output->writeln('<info>No failed messages found.</info>');
             return Command::SUCCESS;
         }
 
-        $output->writeln(sprintf('<info>Found %d failed message(s).</info>', count($messages)));
+        $output->writeln(sprintf('<info>Found %d failed message(s).</info>', count($rows)));
         $output->writeln('');
 
         if ($dryRun) {
-            $output->writeln('<comment>[DRY RUN] The following messages would be replayed:</comment>');
-            $output->writeln('');
-            foreach ($messages as $message) {
+            foreach ($rows as $row) {
                 $output->writeln(sprintf(
                     '  • %s  |  %s  →  %s',
-                    $message->id,
-                    $message->eventClass,
-                    $message->transportName
+                    $row['id'],
+                    $row['event_class'],
+                    $row['transport_name']
                 ));
             }
-            $output->writeln('');
             $output->writeln('<comment>Dry run complete. No messages replayed.</comment>');
             return Command::SUCCESS;
         }
@@ -77,32 +74,25 @@ final class ReplayDeadLetterCommand extends Command
         $replayed = 0;
         $failed   = 0;
 
-        foreach ($messages as $message) {
+        foreach ($rows as $row) {
             try {
                 $serializer = $this->serializerLocator->locate('json');
-                $event      = $serializer->deserialize($message->payload, $message->eventClass);
+                $event      = $serializer->deserialize($row['payload'], $row['event_class']);
+                $headers    = json_decode($row['headers'], true) ?? [];
 
-                $this->producer->produce($message->transportName, $event, $message->headers);
-                $this->poller->markPublished($message->id);
+                $this->producer->produce($row['transport_name'], $event, $headers);
+                $this->repository->markReplayed($row['id']);
 
                 $output->writeln(sprintf(
-                    '  <info>✔ Replayed:</info> %s  |  %s  →  %s',
-                    $message->id,
-                    $message->eventClass,
-                    $message->transportName
+                    '  <info>✔ Replayed:</info> %s  |  %s',
+                    $row['id'],
+                    $row['event_class']
                 ));
                 $replayed++;
             } catch (\Throwable $e) {
-                $this->logger->error('DLQ replay failed', [
-                    'id'         => $message->id,
-                    'event_class' => $message->eventClass,
-                    'transport'  => $message->transportName,
-                    'error'      => $e->getMessage(),
-                ]);
                 $output->writeln(sprintf(
-                    '  <error>✘ Failed:</error>   %s  |  %s — %s',
-                    $message->id,
-                    $message->eventClass,
+                    '  <error>✘ Failed:</error> %s — %s',
+                    $row['id'],
                     $e->getMessage()
                 ));
                 $failed++;

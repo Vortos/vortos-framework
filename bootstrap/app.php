@@ -10,7 +10,7 @@ $dotenv->overload(__DIR__ . '/../.env');
 // $dotenv->bootEnv(__DIR__ . '/../.env');
 
 $env = $_ENV['APP_ENV'] ?? 'prod';
-$debug = $env === 'dev' && filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOL);
+$debug = $env !== 'prod' && filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOL);
 
 if ($debug) {
     Debug::enable();

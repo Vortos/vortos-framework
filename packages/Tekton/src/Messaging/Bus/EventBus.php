@@ -138,12 +138,18 @@ final class EventBus implements EventBusInterface
      */
     private function hasInternalHandlers(string $eventClass): bool
     {
-        foreach($this->handlerRegistry->allConsumers() as $consumerName){
-            if($this->handlerRegistry->hasHandlers($consumerName, $eventClass)){
-                return true;
+        foreach ($this->handlerRegistry->allConsumers() as $consumerName) {
+            if ($this->handlerRegistry->hasHandlers($consumerName, $eventClass)) {
+                // only dispatch in-process if consumer has no external transport
+                try {
+                    $this->producerRegistry->get($consumerName);
+                    // has a producer = external, skip
+                } catch (\Throwable) {
+                    // no producer = internal only, dispatch in-process
+                    return true;
+                }
             }
         }
-
         return false;
     }
 }

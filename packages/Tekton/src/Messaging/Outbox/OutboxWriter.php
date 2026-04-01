@@ -10,6 +10,7 @@ use Fortizan\Tekton\Messaging\Contract\DomainEventInterface;
 use Fortizan\Tekton\Messaging\Contract\OutboxInterface;
 use Fortizan\Tekton\Messaging\Outbox\Exception\OutboxWriteException;
 use Fortizan\Tekton\Messaging\Serializer\SerializerLocator;
+use Symfony\Component\Uid\UuidV7;
 
 /**
  * Writes domain events to the outbox table within the caller's active database transaction.
@@ -33,7 +34,7 @@ final class OutboxWriter implements OutboxInterface
         $eventClass = get_class($event);
         
         try {
-            $id = bin2hex(random_bytes(16));
+            $id = new UuidV7();
             $serializer = $this->serializerLocator->locate('json');
 
             $payload = $serializer->serialize($event);
@@ -49,7 +50,7 @@ final class OutboxWriter implements OutboxInterface
             $this->connection->insert(
                 $this->table,
                 [
-                    'id' => $id,
+                    'id' => (string) $id,
                     'transport_name' => $transportName,
                     'event_class' => $eventClass,
                     'payload' => $payload,

@@ -1,10 +1,10 @@
 <?php
-
 declare(strict_types=1);
-
 namespace Fortizan\Tekton\Messaging\DeadLetter;
 
+use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Uid\UuidV7;
 
 /**
  * Writes unprocessable messages to the failed_messages store.
@@ -14,9 +14,10 @@ use Psr\Log\LoggerInterface;
 final class DeadLetterWriter
 {
     public function __construct(
-        private LoggerInterface $logger
-    ){
-    }
+        private Connection $connection,
+        private LoggerInterface $logger,
+        private string $table = 'tekton_failed_messages'
+    ) {}
 
     public function write(
         string $transportName,
@@ -27,12 +28,29 @@ final class DeadLetterWriter
         string $exceptionClass,
         int $attemptCount
     ): void {
-        // TODO Phase 12: implement DBAL write to failed_messages table
         $this->logger->critical('Message dead-lettered', [
-            'transport' => $transportName,
+            'transport'   => $transportName,
             'event_class' => $eventClass,
-            'reason' => $failureReason,
-            'attempts' => $attemptCount,
+            'reason'      => $failureReason,
+            'attempts'    => $attemptCount,
         ]);
+
+        try {
+            $this->connection->insert($this->table, [
+                'id'              => (string) new UuidV7(),
+                'transport_name'  => $transportName,
+                'event_class'     => $eventClass,
+                'payload'         => $payload,
+                'headers'         => json_encode($headers),
+                'failure_reason'  => $failureReason,
+                'exception_class' => $exceptionClass,
+                'attempt_count'   => $attemptCount,
+                'failed_at'       => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Failed to persist dead letter entry', [
+                'exception' => $e->getMessage(),
+            ]);
+        }
     }
 }

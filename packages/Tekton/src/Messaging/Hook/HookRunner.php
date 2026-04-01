@@ -39,7 +39,7 @@ final class HookRunner
             if ($this->matchesEvent($hook, $eventClass)) {
                 $this->invoke(
                     $hook,
-                    fn($hook) => $hook->handle($event)
+                    fn($hook) => $hook->__invoke($event)
                 );
             }
         }
@@ -59,7 +59,7 @@ final class HookRunner
                 }
                 $this->invoke(
                     $hook,
-                    fn($hook) => $hook->handle($event, $throwable)
+                    fn($hook) => $hook->__invoke($event, $throwable)
                 );
             }
         }
@@ -76,7 +76,7 @@ final class HookRunner
                 $this->invoke(
                     $hook,
                     function ($hook) use ($event, &$headers) {
-                        $hook->handle($event, $headers);
+                        $hook->__invoke($event, $headers);
                     }
                 );
             }
@@ -93,7 +93,7 @@ final class HookRunner
             if ($this->matchesConsume($hook, $eventClass, $consumerName)) {
                 $this->invoke(
                     $hook,
-                    fn($hook) => $hook->handle($envelope, $consumerName)
+                    fn($hook) => $hook->__invoke($envelope, $consumerName)
                 );
             }
         }
@@ -114,7 +114,7 @@ final class HookRunner
 
                 $this->invoke(
                     $hook,
-                    fn($hook) => $hook->handle($envelope, $consumerName, $throwable)
+                    fn($hook) => $hook->__invoke($envelope, $consumerName, $throwable)
                 );
             }
         }

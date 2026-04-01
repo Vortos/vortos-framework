@@ -10,11 +10,6 @@ use Fortizan\Tekton\Messaging\Attribute\AsMiddleware;
 use Fortizan\Tekton\Messaging\Attribute\MessagingConfig;
 use Fortizan\Tekton\Messaging\Attribute\RegisterTransport;
 use Fortizan\Tekton\Messaging\Bus\EventBus;
-use Fortizan\Tekton\Messaging\Command\ConsumeCommand;
-use Fortizan\Tekton\Messaging\Command\ListConsumersCommand;
-use Fortizan\Tekton\Messaging\Command\ListTransportsCommand;
-use Fortizan\Tekton\Messaging\Command\OutboxRelayCommand;
-use Fortizan\Tekton\Messaging\Command\ReplayDeadLetterCommand;
 use Fortizan\Tekton\Messaging\Contract\ConsumerInterface;
 use Fortizan\Tekton\Messaging\Contract\ConsumerLocatorInterface;
 use Fortizan\Tekton\Messaging\Contract\EventBusInterface;
@@ -22,11 +17,6 @@ use Fortizan\Tekton\Messaging\Contract\OutboxInterface;
 use Fortizan\Tekton\Messaging\Contract\OutboxPollerInterface;
 use Fortizan\Tekton\Messaging\Contract\ProducerInterface;
 use Fortizan\Tekton\Messaging\DeadLetter\DeadLetterWriter;
-use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\HandlerDiscoveryCompilerPass;
-use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\HookDiscoveryCompilerPass;
-use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\MessagingConfigCompilerPass;
-use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\MiddlewareCompilerPass;
-use Fortizan\Tekton\Messaging\DependencyInjection\Compiler\TransportRegistryCompilerPass;
 use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryBroker;
 use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryConsumer;
 use Fortizan\Tekton\Messaging\Driver\InMemory\Runtime\InMemoryProducer;
@@ -127,16 +117,38 @@ final class MessagingExtension extends Extension
     private function registerIdempotency(ContainerBuilder $container): void
     {
         if (!$container->hasAlias(CacheInterface::class) && !$container->hasDefinition(CacheInterface::class)) {
-            $container->register('tekton.cache.array', \Symfony\Component\Cache\Psr16Cache::class)
-                ->setArgument('$pool', new Reference('tekton.cache.pool'))
+
+            $container->register('tekton.cache.redis', \Symfony\Component\Cache\Adapter\RedisAdapter::class)
+                ->setArguments([
+                    new Reference('tekton.redis_client'),
+                    'tekton_messaging',  // namespace prefix
+                    86400,               // default TTL
+                ])
                 ->setPublic(false);
 
-            $container->register('tekton.cache.pool', \Symfony\Component\Cache\Adapter\ArrayAdapter::class)
+            $container->register('tekton.redis_client', \Redis::class)
+                ->setFactory([\Symfony\Component\Cache\Adapter\RedisAdapter::class, 'createConnection'])
+                ->setArguments(['redis://redis:6379'])
                 ->setPublic(false);
 
-            $container->setAlias(CacheInterface::class, 'tekton.cache.array')
+            $container->register('tekton.cache.psr16', \Symfony\Component\Cache\Psr16Cache::class)
+                ->setArgument('$pool', new Reference('tekton.cache.redis'))
+                ->setPublic(false);
+
+            $container->setAlias(CacheInterface::class, 'tekton.cache.psr16')
                 ->setPublic(false);
         }
+        // if (!$container->hasAlias(CacheInterface::class) && !$container->hasDefinition(CacheInterface::class)) {
+        //     $container->register('tekton.cache.array', \Symfony\Component\Cache\Psr16Cache::class)
+        //         ->setArgument('$pool', new Reference('tekton.cache.pool'))
+        //         ->setPublic(false);
+
+        //     $container->register('tekton.cache.pool', \Symfony\Component\Cache\Adapter\ArrayAdapter::class)
+        //         ->setPublic(false);
+
+        //     $container->setAlias(CacheInterface::class, 'tekton.cache.array')
+        //         ->setPublic(false);
+        // }
     }
 
     private function registerHooks(ContainerBuilder $container): void
@@ -216,6 +228,7 @@ final class MessagingExtension extends Extension
 
         $container->register('tekton.handler_locator', ServiceLocator::class)
             ->setArguments([[]])  // HandlerDiscoveryCompilerPass fills this
+            ->addTag('container.service_locator')
             ->setPublic(false);
 
         $container->register(ConsumerRunner::class, ConsumerRunner::class)
@@ -239,17 +252,6 @@ final class MessagingExtension extends Extension
 
     private function registerKafkaDrivers(ContainerBuilder $container): void
     {
-        // $container->register(KafkaProducer::class, KafkaProducer::class)
-        //     ->setAutowired(true)
-        //     ->setAutoconfigured(true)
-        //     ->setShared(false)
-        //     ->setPublic(false);
-
-        // $container->register(KafkaConsumer::class, KafkaConsumer::class)
-        //     ->setAutowired(true)
-        //     ->setAutoconfigured(true)
-        //     ->setShared(false)
-        //     ->setPublic(false);
         $container->register(LazyKafkaProducer::class, LazyKafkaProducer::class)
             ->setAutowired(true)
             ->setPublic(false);
@@ -365,23 +367,15 @@ final class MessagingExtension extends Extension
     private function registerRegistries(ContainerBuilder $container): void
     {
         $container->register(TransportRegistry::class, TransportRegistry::class)
-            // ->setAutowired(true)
-            // ->setAutoconfigured(true)
             ->setPublic(false);
 
         $container->register(ProducerRegistry::class, ProducerRegistry::class)
-            // ->setAutowired(true)
-            // ->setAutoconfigured(true)
             ->setPublic(false);
 
         $container->register(ConsumerRegistry::class, ConsumerRegistry::class)
-            // ->setAutowired(true)
-            // ->setAutoconfigured(true)
             ->setPublic(false);
 
         $container->register(HandlerRegistry::class, HandlerRegistry::class)
-            // ->setAutowired(true)
-            // ->setAutoconfigured(true)
             ->setPublic(false);
     }
 

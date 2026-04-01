@@ -1,22 +1,33 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\User\Application\EventHandler;
 
 use App\User\Domain\Event\UserCreatedEvent;
-use Fortizan\Tekton\Bus\Event\Attribute\EventHandler;
+use Doctrine\DBAL\Connection;
+use Fortizan\Tekton\Messaging\Attribute\AsEventHandler;
 use Psr\Log\LoggerInterface;
 
-#[EventHandler(group:'async', retries:2, delay:2000)]
-class SendEmailHandler
+#[AsEventHandler(handlerId: 'user.created.handler', consumer: 'user.events', idempotent: true)]
+final class SendEmailHandler
 {
     public function __construct(
-        private LoggerInterface $logger
-    ){
-    }
+        private LoggerInterface $logger,
+        private Connection $connection
+    ) {}
 
-    public function __invoke(UserCreatedEvent $event)
+    public function __invoke(UserCreatedEvent $event): void
     {
-        $this->logger->warning("Sending Email...........");
-        echo "Sending Email.... \n";
+        $this->logger->info('UserCreatedHandler executed adoooooo', [
+            'userId' => (string) $event->id,
+            'email'  => $event->email,
+        ]);
+
+        $this->connection->insert('test_events', [
+            'user_id' => (string) $event->id,
+            'email'   => $event->email,
+        ]);
+
     }
 }

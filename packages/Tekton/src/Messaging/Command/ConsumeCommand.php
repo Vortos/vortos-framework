@@ -70,7 +70,6 @@ final class ConsumeCommand extends Command
         }
 
         try {
-            
             $this->consumerRunner->run($consumerName);
         } catch (\Throwable $e) {
             

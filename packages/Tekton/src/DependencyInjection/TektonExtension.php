@@ -5,13 +5,9 @@ namespace Fortizan\Tekton\DependencyInjection;
 use Fortizan\Tekton\Attribute\ApiController;
 use Fortizan\Tekton\Bus\Command\Attribute\CommandHandler;
 use Fortizan\Tekton\Bus\Command\Attribute\AsCommand;
-use Fortizan\Tekton\Bus\Event\Attribute\AsEventHandler;
 use Fortizan\Tekton\Bus\Projection\Attribute\ProjectionHandler;
 use Fortizan\Tekton\Bus\Query\Attribute\AsQuery;
 use Fortizan\Tekton\Bus\Query\Attribute\QueryHandler;
-use Fortizan\Tekton\Messaging\Attribute\RegisterTransport;
-use Fortizan\Tekton\Messaging\DependencyInjection\MessagingExtension;
-use Fortizan\Tekton\Tracing\DependencyInjection\TracingExtension;
 use Monolog\Level;
 use ReflectionMethod;
 use Reflector;
@@ -142,7 +138,6 @@ class TektonExtension extends Extension
     {
         $container->registerForAutoconfiguration(EventSubscriberInterface::class)
             ->addTag('kernel.event_subscriber');
-        // ->setPublic(true);
     }
 
     private function registerProjectionAttributes(ContainerBuilder $container): void

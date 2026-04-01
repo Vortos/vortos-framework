@@ -15,10 +15,24 @@ namespace Fortizan\Tekton\Messaging\Hook;
  */
 final class HookRegistry
 {
-    public function __construct(
-        /** @var array<string, HookDescriptor[]> $hooks */
-        private array $hooks
-    ){
+    /** @var array<string, HookDescriptor[]> */
+    private array $hooks;
+
+    public function __construct(array $hooks)
+    {
+        $this->hooks = [];
+        foreach ($hooks as $hookType => $descriptors) {
+            foreach ($descriptors as $descriptor) {
+                $this->hooks[$hookType][] = new HookDescriptor(
+                    hookType: $descriptor['hookType'],
+                    serviceId: $descriptor['serviceId'],
+                    eventFilter: $descriptor['eventFilter'] ?? null,
+                    consumerFilter: $descriptor['consumerFilter'] ?? null,
+                    priority: $descriptor['priority'] ?? 0,
+                    onFailureOnly: $descriptor['onFailureOnly'] ?? false,
+                );
+            }
+        }
     }
 
     public function getHooks(string $hookType): array
@@ -26,12 +40,12 @@ final class HookRegistry
         return $this->hooks[$hookType] ?? [];
     }
 
-    public function hasHooks(string $hookType):bool
+    public function hasHooks(string $hookType): bool
     {
         return !empty($this->hooks[$hookType]);
     }
 
-    public function all():array
+    public function all(): array
     {
         return $this->hooks;
     }
