@@ -9,7 +9,6 @@ use DateTimeInterface;
 use Vortos\Messaging\Bus\Stamp\CorrelationIdStamp;
 use Vortos\Messaging\Bus\Stamp\EventIdStamp;
 use Vortos\Messaging\Bus\Stamp\TimestampStamp;
-use Vortos\Messaging\Contract\DomainEventInterface;
 use Vortos\Messaging\Contract\EventBusInterface;
 use Vortos\Messaging\Contract\OutboxInterface;
 use Vortos\Messaging\Contract\ProducerInterface;
@@ -20,6 +19,7 @@ use Vortos\Tracing\Contract\TracingInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Vortos\Domain\Event\DomainEventInterface;
 
 /**
  * Internal in-process event bus. Wraps Symfony Messenger for handler dispatch

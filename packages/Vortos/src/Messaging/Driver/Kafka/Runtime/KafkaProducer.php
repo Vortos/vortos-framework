@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Vortos\Messaging\Driver\Kafka\Runtime;
 
-use Vortos\Messaging\Contract\DomainEventInterface;
+// use Vortos\Messaging\Contract\DomainEventInterface;
 use Vortos\Messaging\Contract\ProducerInterface;
 use Vortos\Messaging\Driver\Kafka\Exception\ProducerException;
 use Vortos\Messaging\Registry\TransportRegistry;
@@ -12,6 +12,7 @@ use Vortos\Messaging\Serializer\SerializerLocator;
 use Vortos\Tracing\Contract\TracingInterface;
 use RdKafka\Producer;
 use Throwable;
+use Vortos\Domain\Event\DomainEventInterface;
 
 /**
  * Kafka implementation of ProducerInterface using the RdKafka extension.

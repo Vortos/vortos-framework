@@ -6,11 +6,11 @@ namespace Vortos\Messaging\Outbox;
 
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
-use Vortos\Messaging\Contract\DomainEventInterface;
 use Vortos\Messaging\Contract\OutboxInterface;
 use Vortos\Messaging\Outbox\Exception\OutboxWriteException;
 use Vortos\Messaging\Serializer\SerializerLocator;
 use Symfony\Component\Uid\UuidV7;
+use Vortos\Domain\Event\DomainEventInterface;
 
 /**
  * Writes domain events to the outbox table within the caller's active database transaction.

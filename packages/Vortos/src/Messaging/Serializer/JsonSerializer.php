@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Vortos\Messaging\Serializer;
 
-use Vortos\Messaging\Contract\DomainEventInterface;
 use Vortos\Messaging\Contract\SerializerInterface;
 use Vortos\Messaging\Serializer\Exception\DeserializationException;
 use Vortos\Messaging\Serializer\Exception\SerializationException;
@@ -13,6 +12,7 @@ use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionProperty;
 use RuntimeException;
+use Vortos\Domain\Event\DomainEventInterface;
 
 final class JsonSerializer implements SerializerInterface
 {

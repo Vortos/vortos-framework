@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Vortos\Messaging\Hook;
 
-use Vortos\Messaging\Contract\DomainEventInterface;
 use Vortos\Messaging\Hook\Exception\HookExecutionException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Messenger\Envelope;
 use Throwable;
+use Vortos\Domain\Event\DomainEventInterface;
 
 /**
  * Executes registered hooks at the correct lifecycle moments.

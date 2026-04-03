@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Vortos\Messaging\Contract;
 
+use Vortos\Domain\Event\DomainEventInterface;
+
 /**
  * Produces domain events to a named transport (broker topic/queue).
  *

@@ -2,7 +2,7 @@
 
 namespace Vortos\Domain\Aggregate;
 
-use Vortos\Messaging\Contract\DomainEventInterface;
+use Vortos\Domain\Event\DomainEventInterface;
 
 /**
  * Stub base class for Event Sourced aggregates.

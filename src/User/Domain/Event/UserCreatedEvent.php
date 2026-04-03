@@ -4,8 +4,9 @@ namespace App\User\Domain\Event;
 
 use App\User\Infrastructure\Topics\UserTopics;
 use Vortos\Bus\Event\Attribute\AsEvent;
-use Vortos\Messaging\Contract\DomainEventInterface;
+// use Vortos\Messaging\Contract\DomainEventInterface;
 use Symfony\Component\Uid\UuidV7;
+use Vortos\Domain\Event\DomainEventInterface;
 
 #[AsEvent(channel: 'async', topic: UserTopics::UserCreated, version: 'v5')]
 #[AsEvent(channel: 'rt', topic: UserTopics::UserCreated, version: 'v2')]

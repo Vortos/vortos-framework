@@ -7,7 +7,6 @@ namespace Vortos\Messaging\DependencyInjection\Compiler;
 use Vortos\Messaging\Attribute\RegisterConsumer;
 use Vortos\Messaging\Attribute\RegisterProducer;
 use Vortos\Messaging\Attribute\RegisterTransport;
-use Vortos\Messaging\Contract\DomainEventInterface;
 use Vortos\Messaging\Definition\Consumer\AbstractConsumerDefinition;
 use Vortos\Messaging\Definition\Producer\AbstractProducerDefinition;
 use Vortos\Messaging\Definition\Transport\AbstractTransportDefinition;
@@ -16,6 +15,7 @@ use ReflectionClass;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Vortos\Domain\Event\DomainEventInterface;
 
 final class MessagingConfigCompilerPass implements CompilerPassInterface
 {

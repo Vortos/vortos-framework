@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\User\Application\EventHandler;
 
-use Vortos\Messaging\Contract\DomainEventInterface;
 use Vortos\Messaging\Hook\Attribute\BeforeDispatch;
 use Psr\Log\LoggerInterface;
+use Vortos\Domain\Event\DomainEventInterface;
 
 #[BeforeDispatch]
 final class LogDispatchHook

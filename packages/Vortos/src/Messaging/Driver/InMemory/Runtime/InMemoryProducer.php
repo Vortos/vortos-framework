@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Vortos\Messaging\Driver\InMemory\Runtime;
 
 use DateTimeImmutable;
-use Vortos\Messaging\Contract\DomainEventInterface;
+use Vortos\Domain\Event\DomainEventInterface;
 use Vortos\Messaging\Contract\ProducerInterface;
 use Vortos\Messaging\Serializer\SerializerLocator;
 use Vortos\Messaging\ValueObject\ReceivedMessage;

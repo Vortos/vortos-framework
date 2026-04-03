@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Vortos\Messaging\Driver\Kafka\Runtime;
 
-use Vortos\Messaging\Contract\DomainEventInterface;
+use Vortos\Domain\Event\DomainEventInterface;
 use Vortos\Messaging\Contract\ProducerInterface;
 use Vortos\Messaging\Driver\Kafka\Factory\KafkaProducerFactory;
 

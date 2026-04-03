@@ -8,7 +8,6 @@ use Vortos\Messaging\Attribute\AsEventHandler;
 use Vortos\Messaging\Attribute\Header\CorrelationId;
 use Vortos\Messaging\Attribute\Header\MessageId;
 use Vortos\Messaging\Attribute\Header\Timestamp;
-use Vortos\Messaging\Contract\DomainEventInterface;
 use LogicException;
 use ReflectionClass;
 use ReflectionMethod;
@@ -16,6 +15,7 @@ use ReflectionNamedType;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
+use Vortos\Domain\Event\DomainEventInterface;
 
 final class HandlerDiscoveryCompilerPass implements CompilerPassInterface
 {
