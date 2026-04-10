@@ -36,10 +36,27 @@ class Runner
     {
         $request = $this->getRequest();
 
+        // try {
+
+        // $this->getContainer();
         try {
-
             $this->getContainer();
+        } catch (\Throwable $e) {
+            // Container failed to compile — log it prominently
+            error_log('FATAL: Container compilation failed: ' . $e->getMessage());
+            error_log($e->getTraceAsString());
 
+            // Return a clear 503 with the error in debug mode
+            return new Response(
+                $this->debug
+                    ? '<h1>Container Error</h1><pre>' . htmlspecialchars($e->getMessage()) . '</pre><pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>'
+                    : 'Service temporarily unavailable. Check application logs.',
+                503,
+                ['Content-Type' => 'text/html'],
+            );
+        }
+
+        try {
             $kernel = $this->container->get('vortos');
 
             $this->response = $kernel->handle(
@@ -121,7 +138,7 @@ class Runner
         return $container;
     }
 
-    private function configureContainer(ContainerBuilder $container):void
+    private function configureContainer(ContainerBuilder $container): void
     {
         $container->setParameter('kernel.env', $this->environment);
         $container->setParameter('kernel.debug', $this->debug);
@@ -134,12 +151,12 @@ class Runner
         }
     }
 
-    private function handleCachingContainer(Container $container):void
+    private function handleCachingContainer(Container $container): void
     {
         if ($this->environment !== 'prod') {
             return;
         }
-        
+
         $dumper = new PhpDumper($container);
 
         if ($this->context === 'http') {

@@ -49,7 +49,6 @@ final class PersistenceExtension extends Extension
         if (file_exists($base)) {
             (require $base)($config);
         }
-        var_dump(json_encode($config->toArray()));
 
         $envFile = $projectDir . '/config/' . $env . '/persistence.php';
         if (file_exists($envFile)) {

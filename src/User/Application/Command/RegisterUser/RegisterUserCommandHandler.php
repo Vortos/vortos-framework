@@ -1,34 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\User\Application\Command\RegisterUser;
 
 use App\User\Domain\Entity\User;
-use App\User\Domain\Exception\UserAlreadyExistException;
-use App\User\Domain\Repository\UserRepositoryInterface;
-use App\User\Domain\Service\UserUniquenessCheckerInterface;
-use Vortos\Bus\Command\Attribute\CommandHandler;
+use Vortos\Cqrs\Attribute\AsCommandHandler;
 
-#[CommandHandler]
-class RegisterUserCommandHandler
+#[AsCommandHandler(handles:RegisterUserCommand::class)]
+final class RegisterUserHandler 
 {
-    public function __construct(
-        private UserRepositoryInterface $userRepository,
-        private UserUniquenessCheckerInterface $userUniquenessChecker
-    ){
-    }
-
-    public function __invoke(RegisterUserCommand $command)
+    public function __invoke(RegisterUserCommand $command): User
     {
-        // if(!$this->userUniquenessChecker->isEmailUnique($command->email)){
-        //     throw UserAlreadyExistException::withEmail($command->email);
-        // }
-
         $user = User::registerUser(
             $command->name,
             $command->email,
-            'ACTIVE'
+            true
         );
 
-        $this->userRepository->save($user);
+        // No repository yet — just return the aggregate
+        return $user;
     }
 }

@@ -20,7 +20,7 @@ return static function (ContainerConfigurator $configurator) {
     $configurator->import('./packages/route.php');
     $configurator->import('./packages/event.php');
     $configurator->import('./packages/monolog.php');
-    $configurator->import('./packages/doctrine.php');
+    // $configurator->import('./packages/doctrine.php');
 
     $services->load('Vortos\\', '../src')
         ->exclude([

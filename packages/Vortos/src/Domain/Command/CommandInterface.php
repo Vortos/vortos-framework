@@ -30,5 +30,5 @@ interface CommandInterface
      * 
      * Example: bin2hex(random_bytes(16)) generated client-side before submit.
      */
-    public function idempotencyKey(): string;
+    public function idempotencyKey(): ?string;
 }

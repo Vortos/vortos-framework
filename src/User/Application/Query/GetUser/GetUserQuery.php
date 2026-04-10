@@ -1,13 +1,14 @@
 <?php
 
-namespace App\User\Application\Query\GetUser;
+declare(strict_types=1);
 
-use Vortos\Bus\Query\Contract\QueryInterface;
+namespace App\User\Application\Query;
 
-class GetUserQuery implements QueryInterface
+use Vortos\Domain\Query\QueryInterface;
+
+final readonly class GetUserQuery implements QueryInterface
 {
     public function __construct(
-        public string $userId
-    )
-    {}
+        public readonly string $userId
+    ) {}
 }

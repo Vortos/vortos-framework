@@ -20,6 +20,7 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\Messenger\DependencyInjection\MessengerPass;
+use Vortos\Cqrs\DependencyInjection\CqrsPackage;
 use Vortos\Persistence\DependencyInjection\PersistencePackage;
 use Vortos\PersistenceDbal\DependencyInjection\DbalPersistencePackage;
 use Vortos\PersistenceMongo\DependencyInjection\MongoPersistencePackage;
@@ -51,6 +52,7 @@ $packages = [
     new PersistencePackage(),       
     new DbalPersistencePackage(),   
     new MongoPersistencePackage(),
+    new CqrsPackage(),
 ];
 
 foreach ($packages as $package) {

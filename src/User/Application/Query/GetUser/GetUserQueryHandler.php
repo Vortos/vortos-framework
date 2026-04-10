@@ -1,30 +1,21 @@
 <?php
 
-namespace App\User\Application\Query\GetUser;
+declare(strict_types=1);
 
-use App\User\Application\Query\Contract\UserFinderInterface;
-use App\User\Domain\Exception\UserNotFoundException;
-use Vortos\Bus\Query\Attribute\QueryHandler;
+namespace App\User\Application\Query;
 
-#[QueryHandler]
-class GetUserQueryHandler
+use Vortos\Cqrs\Attribute\AsQueryHandler;
+
+#[AsQueryHandler(handles: GetUserQuery::class)]
+final class GetUserQueryHandler
 {
-    public function __construct(
-        private UserFinderInterface $userFinder
-    ) {}
-
-    public function __invoke(GetUserQuery $query): GetUserResponse
+    public function __invoke(GetUserQuery $query): ?array
     {
-        $user = $this->userFinder->findById($query->userId);
-
-        if($user === null){
-            throw UserNotFoundException::withId($query->userId);
-        }
-
-        return new GetUserResponse(
-            userId: $user['_id'],
-            userEmail: $user['email'],
-            userName: $user["name"]
-        );
+        // Stub — return fake data for now
+        return [
+            'id'    => $query->userId,
+            'email' => 'alice@example.com',
+            'name'  => 'Alice',
+        ];
     }
 }

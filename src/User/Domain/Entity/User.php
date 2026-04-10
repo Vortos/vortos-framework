@@ -37,12 +37,17 @@ class User extends AggregateRoot
 
         #[Column(name: 'status', type: 'boolean', nullable: true)]
         private ?bool $status,
+
+        #[Column(name: 'version', type: 'integer')]
+        private int $version = 0,
     ) {}
 
     public static function registerUser(string $name, string $email, ?bool $status): self
     {
+        $id = UserId::generate();
+
         $user = new User(
-            UserId::generate(),
+            $id,
             $name,
             $email,
             $status

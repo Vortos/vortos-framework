@@ -1,14 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\User\Application\Command\RegisterUser;
 
-use Vortos\Bus\Command\Contract\CommandInterface;
+use Vortos\Domain\Command\AbstractCommand;
+use Vortos\Domain\Command\AsIdempotencyKey;
 
-readonly class RegisterUserCommand implements CommandInterface
+final readonly class RegisterUserCommand extends AbstractCommand
 {
     public function __construct(
-        public string $name,
-        public string $email
-    )
-    {}
+        public readonly string $email,
+        public readonly string $name,
+
+        #[AsIdempotencyKey]
+        private readonly string $idempotencyKey,
+    ) {}
 }
