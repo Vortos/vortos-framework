@@ -6,12 +6,12 @@ namespace App\User\Representation\Controller;
 
 use App\User\Domain\Entity\UserId;
 use App\User\Domain\Event\UserCreatedEvent;
-use Vortos\Attribute\ApiController;
 use Vortos\Messaging\Contract\EventBusInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\UuidV7;
+use Vortos\Http\Attribute\ApiController;
 
 #[ApiController]
 #[Route('/test/publish', methods: ['GET'])]

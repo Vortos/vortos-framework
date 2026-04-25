@@ -7,8 +7,8 @@ namespace App\Athlete\Representation\Controller;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Vortos\Attribute\ApiController;
 use Vortos\Authorization\Attribute\RequiresPermission;
+use Vortos\Http\Attribute\ApiController;
 
 #[ApiController]
 #[Route('/api/athletes/{athleteId}', methods: ['PUT'])]

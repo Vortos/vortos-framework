@@ -214,6 +214,15 @@
             'aliases' => array(),
             'dev_requirement' => true,
         ),
+        'phpstan/phpstan' => array(
+            'pretty_version' => '2.1.51',
+            'version' => '2.1.51.0',
+            'reference' => 'dc3b523c45e714c70de2ac5113b958223b55dc59',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../phpstan/phpstan',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
         'phpunit/php-code-coverage' => array(
             'pretty_version' => '11.0.12',
             'version' => '11.0.12.0',
@@ -902,7 +911,7 @@
         'vortos/vortos' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '5cda6336edb2943278fe6176b1e8391b3d3644a8',
+            'reference' => 'ebea24f4c1ff450031dddea3206af67cbb92d8be',
             'type' => 'library',
             'install_path' => __DIR__ . '/../vortos/vortos',
             'aliases' => array(),

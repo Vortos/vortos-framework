@@ -16,7 +16,7 @@ class ConsoleCommandPass implements CompilerPassInterface
         }
 
         $applicationDefinition = $container->findDefinition(Application::class);
-
+        
         $taggedServices = $container->findTaggedServiceIds('console.command');
 
         foreach ($taggedServices as $id => $tags) {

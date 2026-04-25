@@ -1627,6 +1627,62 @@
             "install-path": "../phar-io/version"
         },
         {
+            "name": "phpstan/phpstan",
+            "version": "2.1.51",
+            "version_normalized": "2.1.51.0",
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/dc3b523c45e714c70de2ac5113b958223b55dc59",
+                "reference": "dc3b523c45e714c70de2ac5113b958223b55dc59",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.4|^8.0"
+            },
+            "conflict": {
+                "phpstan/phpstan-shim": "*"
+            },
+            "time": "2026-04-21T18:22:01+00:00",
+            "bin": [
+                "phpstan",
+                "phpstan.phar"
+            ],
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHPStan - PHP Static Analysis Tool",
+            "keywords": [
+                "dev",
+                "static analysis"
+            ],
+            "support": {
+                "docs": "https://phpstan.org/user-guide/getting-started",
+                "forum": "https://github.com/phpstan/phpstan/discussions",
+                "issues": "https://github.com/phpstan/phpstan/issues",
+                "security": "https://github.com/phpstan/phpstan/security/policy",
+                "source": "https://github.com/phpstan/phpstan-src"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/ondrejmirtes",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/phpstan",
+                    "type": "github"
+                }
+            ],
+            "install-path": "../phpstan/phpstan"
+        },
+        {
             "name": "phpunit/php-code-coverage",
             "version": "11.0.12",
             "version_normalized": "11.0.12.0",
@@ -6990,11 +7046,12 @@
             "dist": {
                 "type": "path",
                 "url": "./packages/Vortos",
-                "reference": "5cda6336edb2943278fe6176b1e8391b3d3644a8"
+                "reference": "ebea24f4c1ff450031dddea3206af67cbb92d8be"
             },
             "require": {
                 "doctrine/dbal": "^4.4",
                 "doctrine/orm": "^3.5",
+                "firebase/php-jwt": "^7.0",
                 "monolog/monolog": "^3.0",
                 "php": ">=8.2",
                 "psr/log": "^3.0",
@@ -7052,6 +7109,7 @@
         "open-telemetry/context",
         "phar-io/manifest",
         "phar-io/version",
+        "phpstan/phpstan",
         "phpunit/php-code-coverage",
         "phpunit/php-file-iterator",
         "phpunit/php-invoker",

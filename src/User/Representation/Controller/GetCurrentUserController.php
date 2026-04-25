@@ -6,10 +6,10 @@ use App\User\Application\Query\GetUser\GetUserQuery;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Vortos\Attribute\ApiController;
 use Vortos\Auth\Attribute\RequiresAuth;
 use Vortos\Auth\Identity\CurrentUserProvider;
 use Vortos\Cqrs\Query\QueryBusInterface;
+use Vortos\Http\Attribute\ApiController;
 
 #[ApiController]
 #[Route('/api/users/me', methods: ['GET'])]

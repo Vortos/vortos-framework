@@ -24,9 +24,7 @@ $container->setParameter('kernel.project_dir', __DIR__ . '/../../../..');
 $container->setParameter('charset', 'UTF-8');
 $container->setParameter('kernel.log_path', __DIR__ . '/../../../../var/log');
 
-// Load application services
-$loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../../../config'));
-$loader->load('services.php');
+
 
 $container->register(Application::class, Application::class)
     ->setArguments(['Vortos', '1.0.0-alpha'])
@@ -53,5 +51,12 @@ foreach ($packages as $package) {
     $container->registerExtension($extension);
     $container->loadFromExtension($extension->getAlias());
 }
+
+
+$loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../../../config'));
+$loader->load('services.php');
+
+$loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../config'));
+$loader->load('services.php');
 
 return $container;

@@ -33,7 +33,8 @@
   "require-dev": {
     "phpunit/phpunit": "^11.0",
     "kwn/php-rdkafka-stubs": "^2.0",
-    "open-telemetry/api": "^1.8"
+    "open-telemetry/api": "^1.8",
+    "phpstan/phpstan": "^2.1"
   },
   "autoload": {
     "psr-4": {

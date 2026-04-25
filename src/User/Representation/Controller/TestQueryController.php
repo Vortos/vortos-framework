@@ -8,9 +8,8 @@ use App\User\Application\Query\GetUser\GetUserQuery;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Uid\UuidV7;
-use Vortos\Attribute\ApiController;
 use Vortos\Cqrs\Query\QueryBusInterface;
+use Vortos\Http\Attribute\ApiController;
 
 #[ApiController]
 #[Route('/test/query', methods: ['GET'])]

@@ -4,7 +4,7 @@ namespace Vortos\Foundation;
 
 use CachedContainer;
 use Vortos\Foundation\DependencyInjection\Compiler\ConsoleCommandPass;
-use Vortos\Controller\ErrorController;
+use Vortos\Http\Controller\ErrorController;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\ContainerBuilder;

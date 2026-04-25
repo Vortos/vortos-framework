@@ -112,6 +112,18 @@ final class MessagingExtension extends Extension
         $this->registerCLICommands($container);
         $this->registerDefaultDriverInterfaces($container, $resolvedConfig['driver']);
         $this->registerHooks($container);
+        $this->registerRetry($container);
+    }
+
+    private function registerRetry(ContainerBuilder $container): void
+    {
+        $container->register(\Vortos\Messaging\Retry\RetryDecider::class, \Vortos\Messaging\Retry\RetryDecider::class)
+            ->setAutowired(true)
+            ->setPublic(false);
+
+        $container->register(\Vortos\Messaging\Retry\RetryDelayCalculator::class, \Vortos\Messaging\Retry\RetryDelayCalculator::class)
+            ->setAutowired(true)
+            ->setPublic(false);
     }
 
     private function initializeParameters(ContainerBuilder $container): void
@@ -201,9 +213,21 @@ final class MessagingExtension extends Extension
 
     private function registerCLICommands(ContainerBuilder $container): void
     {
-        $container->registerForAutoconfiguration(Command::class)
-            ->addTag('console.command')
-            ->setPublic(true);
+        $commands = [
+            \Vortos\Messaging\Command\ConsumeCommand::class,
+            \Vortos\Messaging\Command\OutboxRelayCommand::class,
+            \Vortos\Messaging\Command\SetupMessagingCommand::class,
+            \Vortos\Messaging\Command\ListConsumersCommand::class,
+            \Vortos\Messaging\Command\ListTransportsCommand::class,
+            \Vortos\Messaging\Command\ReplayDeadLetterCommand::class,
+        ];
+
+        foreach ($commands as $class) {
+            $container->register($class, $class)
+                ->setAutowired(true)
+                ->setPublic(true)
+                ->addTag('console.command');
+        }
     }
 
     private function registerConsumerRunner(ContainerBuilder $container): void
@@ -274,6 +298,10 @@ final class MessagingExtension extends Extension
 
     private function registerDeadLetterWriter(ContainerBuilder $container): void
     {
+        $container->register(\Vortos\Messaging\DeadLetter\DeadLetterRepository::class, \Vortos\Messaging\DeadLetter\DeadLetterRepository::class)
+            ->setAutowired(true)
+            ->setPublic(false);
+
         $container->register(DeadLetterWriter::class, DeadLetterWriter::class)
             ->setAutowired(true)
             ->setAutoconfigured(true)

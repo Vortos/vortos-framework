@@ -7,12 +7,11 @@ namespace App\User\Representation\Controller;
 use App\User\Domain\Entity\User;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Vortos\Attribute\ApiController;
 use Vortos\Auth\Contract\PasswordHasherInterface;
 use Vortos\Auth\Identity\UserIdentity;
 use Vortos\Auth\Jwt\JwtService;
+use Vortos\Http\Attribute\ApiController;
 
 #[ApiController]
 #[Route('/api/auth/login', methods: ['POST'])]
@@ -30,7 +29,7 @@ final class LoginController
         $email = $data['email'] ?? '';
         $password = $data['password'] ?? '';
 
-        $user = User::registerUser('fdsf', 'dsfs', true);
+        $user = User::registerUser('fdsf', 'dsfs', '');
 
         // if ($user === null || !$this->hasher->verify($password, $user->getPasswordHash())) {
         //     return new JsonResponse(

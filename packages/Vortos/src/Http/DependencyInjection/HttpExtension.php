@@ -19,8 +19,8 @@ use Symfony\Component\HttpKernel\EventListener\RouterListener;
 use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\RouteCollection;
-use Vortos\Attribute\ApiController;
-use Vortos\Controller\ErrorController;
+use Vortos\Http\Controller\ErrorController;
+use Vortos\Http\Attribute\ApiController;
 use Vortos\Http\Kernel;
 
 /**

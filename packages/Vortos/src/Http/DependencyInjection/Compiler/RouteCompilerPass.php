@@ -2,11 +2,11 @@
 
 namespace Vortos\Http\DependencyInjection\Compiler;
 
-use Vortos\Routing\RouteAttributeClassLoader;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\Routing\RouteCollection;
+use Vortos\Http\Routing\RouteAttributeClassLoader;
 
 class RouteCompilerPass implements CompilerPassInterface
 {

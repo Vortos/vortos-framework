@@ -97,8 +97,8 @@ abstract class InMemoryWriteRepository implements WriteRepositoryInterface
             }
         }
 
-        $this->store[$key] = clone $aggregate;
-        $aggregate->incrementVersion();
+        $aggregate->incrementVersion();  
+        $this->store[$key] = clone $aggregate; 
     }
 
     /**

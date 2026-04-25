@@ -7,7 +7,6 @@ namespace Vortos\Http\DependencyInjection;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
-use Vortos\Console\ConsoleCommandPass;
 use Vortos\Container\Contract\PackageInterface;
 use Vortos\Http\DependencyInjection\Compiler\HttpListenerCompilerPass;
 use Vortos\Http\DependencyInjection\Compiler\RegisterEventSubscribersPass;
@@ -47,12 +46,6 @@ final class HttpPackage implements PackageInterface
             new RouteCompilerPass(),
             PassConfig::TYPE_BEFORE_OPTIMIZATION,
             80,
-        );
-
-        $container->addCompilerPass(
-            new ConsoleCommandPass(),
-            PassConfig::TYPE_BEFORE_OPTIMIZATION,
-            70,
         );
     }
 }
