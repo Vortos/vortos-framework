@@ -20,6 +20,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Vortos\Domain\Event\DomainEventInterface;
+use Vortos\Messaging\Registry\ConsumerRegistry;
 
 /**
  * Internal in-process event bus. Wraps Symfony Messenger for handler dispatch
@@ -46,7 +47,8 @@ final class EventBus implements EventBusInterface
         private array $eventProducerMap,
         private HookRunner $hookRunner,
         private LoggerInterface $logger,
-        private TracingInterface $tracer
+        private TracingInterface $tracer,
+        private ConsumerRegistry $consumerRegistry,
     ){
     }
 
@@ -139,17 +141,19 @@ final class EventBus implements EventBusInterface
     private function hasInternalHandlers(string $eventClass): bool
     {
         foreach ($this->handlerRegistry->allConsumers() as $consumerName) {
-            if ($this->handlerRegistry->hasHandlers($consumerName, $eventClass)) {
-                // only dispatch in-process if consumer has no external transport
-                try {
-                    $this->producerRegistry->get($consumerName);
-                    // has a producer = external, skip
-                } catch (\Throwable) {
-                    // no producer = internal only, dispatch in-process
+            if (!$this->handlerRegistry->hasHandlers($consumerName, $eventClass)) {
+                continue;
+            }
+
+            try {
+                $consumerConfig = $this->consumerRegistry->get($consumerName);
+                if ($consumerConfig['inProcess'] ?? false) {
                     return true;
                 }
+            } catch (\Throwable) {
             }
         }
+
         return false;
     }
 }

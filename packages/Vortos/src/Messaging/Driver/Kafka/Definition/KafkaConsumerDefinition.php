@@ -33,6 +33,7 @@ final class KafkaConsumerDefinition extends AbstractConsumerDefinition
     private string $autoOffsetResetPolicy = 'earliest';
     private int $fetchMinBytes = 1;
     private int $fetchMaxWaitMs = 500;
+    private bool $inProcess = false;
 
     /**
      * Kafka consumer group ID. All worker processes running this consumer
@@ -83,6 +84,18 @@ final class KafkaConsumerDefinition extends AbstractConsumerDefinition
         return $this;
     }
 
+    /**
+     * Mark this consumer as in-process only — no Kafka transport used.
+     * When true, EventBus dispatches events to handlers directly in-process
+     * via Symfony Messenger instead of routing through Kafka.
+     * Use for lightweight internal events that do not need external delivery.
+     */
+    public function inProcess(bool $inProcess = true): static
+    {
+        $this->inProcess = $inProcess;
+        return $this;
+    }
+
     public function toArray(): array
     {
         return [
@@ -92,6 +105,7 @@ final class KafkaConsumerDefinition extends AbstractConsumerDefinition
             'batchSize' => $this->batchSize,
             'retry' => $this->retryPolicy?->toArray() ?? [],
             'dlq' => $this->dlqTransport,
+            'inProcess' => $this->inProcess,
             'kafka' => [
                 'asyncCommit' => $this->asyncCommit,
                 'sessionTimeoutMs' => $this->sessionTimeoutMs,

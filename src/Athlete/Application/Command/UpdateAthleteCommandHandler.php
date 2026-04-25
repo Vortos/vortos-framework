@@ -7,7 +7,7 @@ use Vortos\Authorization\Engine\PolicyEngine;
 use Vortos\Cqrs\Attribute\AsCommandHandler;
 
 #[AsCommandHandler]
-final class UpdateAthleteHandler
+final class UpdateAthleteCommandHandler
 {
     public function __construct(
         private PolicyEngine $policy,

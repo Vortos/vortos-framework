@@ -17,7 +17,7 @@ use Vortos\Cqrs\Command\CommandBusInterface;
 
 #[ApiController]
 #[Route('/test/command', methods: ['GET'])]
-#[RequiresAuth]
+// #[RequiresAuth]
 final class TestCommandController
 {
     public function __construct(

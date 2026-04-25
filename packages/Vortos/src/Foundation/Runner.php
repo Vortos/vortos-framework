@@ -3,7 +3,7 @@
 namespace Vortos\Foundation;
 
 use CachedContainer;
-use Vortos\Console\ConsoleCommandPass;
+use Vortos\Foundation\DependencyInjection\Compiler\ConsoleCommandPass;
 use Vortos\Controller\ErrorController;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Container;

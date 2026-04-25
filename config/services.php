@@ -19,3 +19,15 @@ return static function (ContainerConfigurator $configurator) {
             '../src/test.php'
         ]);
 };
+
+// return static function (ContainerConfigurator $configurator): void {
+//     $services = $configurator->services()
+//         ->defaults()
+//         ->autowire()
+//         ->autoconfigure()
+//         ->bind('$projectRoot', '%kernel.project_dir%');
+
+//     $services->load('App\\', '../src/');
+
+//     $services->alias(\Symfony\Component\DependencyInjection\ContainerInterface::class, 'service_container');
+// };

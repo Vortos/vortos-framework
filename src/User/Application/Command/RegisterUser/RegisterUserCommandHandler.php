@@ -19,7 +19,7 @@ final class RegisterUserCommandHandler
         $user = User::registerUser(
             $command->name,
             $command->email,
-            true
+            ''
         );
 
         $this->logger->alert("command handler");

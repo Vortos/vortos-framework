@@ -45,10 +45,22 @@ final class AuthDiscoveryPass implements CompilerPassInterface
     public function process(ContainerBuilder $container): void
     {
         // If user already registered their own UserProviderInterface — skip
+
+        // Temporary — add at the top of AuthDiscoveryPass::process() before the early return check
+        if ($container->hasAlias(UserProviderInterface::class)) {
+            $alias = $container->getAlias(UserProviderInterface::class);
+            error_log('UserProviderInterface aliased to: ' . (string) $alias);
+        }
+        if ($container->hasDefinition(UserProviderInterface::class)) {
+            $def = $container->getDefinition(UserProviderInterface::class);
+            error_log('UserProviderInterface defined as: ' . $def->getClass());
+        }
         if (
             $container->hasAlias(UserProviderInterface::class)
             || $container->hasDefinition(UserProviderInterface::class)
         ) {
+        dd('----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------');
+
             return;
         }
 
@@ -100,6 +112,7 @@ final class AuthDiscoveryPass implements CompilerPassInterface
         ]);
         $definition->setShared(true);
         $definition->setPublic(false);
+        $definition->setAutowired(false);
 
         $container->setDefinition(ReflectiveUserProvider::class, $definition);
         $container->setAlias(UserProviderInterface::class, ReflectiveUserProvider::class)

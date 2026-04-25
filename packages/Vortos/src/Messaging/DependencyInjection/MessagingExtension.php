@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Vortos\Messaging\DependencyInjection;
 
-use Doctrine\DBAL\Connection;
 use Vortos\Messaging\Attribute\AsEventHandler;
 use Vortos\Messaging\Attribute\AsMiddleware;
 use Vortos\Messaging\Attribute\MessagingConfig;
@@ -49,8 +48,6 @@ use Vortos\Messaging\Runtime\ConsumerRunner;
 use Vortos\Messaging\Runtime\OutboxRelayRunner;
 use Vortos\Messaging\Serializer\JsonSerializer;
 use Vortos\Messaging\Serializer\SerializerLocator;
-use Vortos\Persistence\Registry\DoctrineConnectionRegistry;
-use Psr\SimpleCache\CacheInterface;
 use ReflectionMethod;
 use Reflector;
 use Symfony\Component\Console\Command\Command;
@@ -59,6 +56,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\Messenger\MessageBus;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Vortos\Persistence\Transaction\UnitOfWorkInterface;
 
 final class MessagingExtension extends Extension
@@ -70,15 +69,7 @@ final class MessagingExtension extends Extension
 
     public function load(array $configs, ContainerBuilder $container):void
     {
-        if (!$container->hasParameter('vortos.event_producer_map')) {
-            $container->setParameter('vortos.event_producer_map', []);
-        }
-        if (!$container->hasParameter('vortos.handlers')) {
-            $container->setParameter('vortos.handlers', []);
-        }
-        if (!$container->hasParameter('vortos.hooks')) {
-            $container->setParameter('vortos.hooks', []);
-        }
+        $this->initializeParameters($container);
 
         $projectDir = $container->getParameter('kernel.project_dir');
         $env = $container->getParameter('kernel.env');
@@ -97,6 +88,15 @@ final class MessagingExtension extends Extension
 
         $resolvedConfig = $this->processConfiguration(new Configuration(), [$vortosConfig->toArray()]);
 
+        // $container->register(MessageBus::class, MessageBus::class)
+        //     ->setArguments([[]])
+        //     ->setShared(true)
+        //     ->setPublic(false);
+
+        // $container->setAlias(MessageBusInterface::class, MessageBus::class)
+        //     ->setPublic(false);
+            
+        $this->registerInProcessBus($container);
         $this->registerMessagingAttributes($container);
         $this->registerMessagingConfigAttributes($container);
         $this->registerRegistries($container);
@@ -112,6 +112,32 @@ final class MessagingExtension extends Extension
         $this->registerCLICommands($container);
         $this->registerDefaultDriverInterfaces($container, $resolvedConfig['driver']);
         $this->registerHooks($container);
+    }
+
+    private function initializeParameters(ContainerBuilder $container): void
+    {
+        $defaults = [
+            'vortos.event_producer_map' => [],
+            'vortos.handlers'           => [],
+            'vortos.hooks'              => [],
+        ];
+
+        foreach ($defaults as $key => $value) {
+            if (!$container->hasParameter($key)) {
+                $container->setParameter($key, $value);
+            }
+        }
+    }
+
+    private function registerInProcessBus(ContainerBuilder $container): void
+    {
+        $container->register(MessageBus::class, MessageBus::class)
+            ->setArguments([[]])
+            ->setShared(true)
+            ->setPublic(false);
+
+        $container->setAlias(MessageBusInterface::class, MessageBus::class)
+            ->setPublic(false);
     }
 
     private function registerHooks(ContainerBuilder $container): void
@@ -207,6 +233,7 @@ final class MessagingExtension extends Extension
             ->setAutowired(true)
             ->setAutoconfigured(true)
             ->setArgument('$eventProducerMap', '%vortos.event_producer_map%')
+            ->setArgument('$consumerRegistry', new Reference(ConsumerRegistry::class))
             ->setPublic(false);
 
         $container->setAlias(EventBusInterface::class, EventBus::class)

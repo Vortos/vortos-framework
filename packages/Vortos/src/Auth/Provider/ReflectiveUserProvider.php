@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vortos\Auth\Provider;
 
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Vortos\Auth\Contract\AuthUserInterface;
 use Vortos\Auth\Contract\UserProviderInterface;
 use Vortos\Domain\Repository\WriteRepositoryInterface;
@@ -17,6 +18,7 @@ use Vortos\Domain\Repository\WriteRepositoryInterface;
  *
  * You never instantiate this directly — the container builds it.
  */
+// #[Autoconfigure(autowire: false)] 
 final class ReflectiveUserProvider implements UserProviderInterface
 {
     public function __construct(
