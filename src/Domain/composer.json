@@ -1,0 +1,14 @@
+{
+    "name": "vortos/vortos-domain",
+    "description": "Vortos domain primitives — AggregateRoot, DomainEvent, ValueObject, Repository contracts",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vortos\\Domain\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.2"
+    }
+}
