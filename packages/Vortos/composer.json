@@ -1,45 +1,22 @@
 {
-  "name": "vortos/vortos",
-  "description": "The Vortos Clean Architecture Framework",
-  "type": "library",
-  "license": "MIT",
-  "autoload": {
-    "psr-4": {
-      "Vortos\\": "src/"
+    "name": "vortos/vortos",
+    "description": "The Vortos Clean Architecture Framework — meta-package",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2",
+        "vortos/vortos-domain": "^1.0",
+        "vortos/vortos-foundation": "^1.0",
+        "vortos/vortos-http": "^1.0",
+        "vortos/vortos-logger": "^1.0",
+        "vortos/vortos-cache": "^1.0",
+        "vortos/vortos-tracing": "^1.0",
+        "vortos/vortos-persistence": "^1.0",
+        "vortos/vortos-persistence-dbal": "^1.0",
+        "vortos/vortos-persistence-mongo": "^1.0",
+        "vortos/vortos-messaging": "^1.0",
+        "vortos/vortos-cqrs": "^1.0",
+        "vortos/vortos-auth": "^1.0",
+        "vortos/vortos-authorization": "^1.0"
     }
-  },
-  "require": {
-    "php": ">=8.2",
-    "psr/log": "^3.0",
-    "psr/simple-cache": "^3.0",
-    "symfony/http-foundation": "^7.3",
-    "symfony/routing": "^7.3",
-    "symfony/http-kernel": "^7.3",
-    "symfony/event-dispatcher": "^7.3",
-    "symfony/dependency-injection": "^7.3",
-    "symfony/config": "^7.3",
-    "symfony/messenger": "^7.3",
-    "symfony/console": "^7.3",
-    "symfony/yaml": "^7.4",
-    "symfony/dotenv": "^8.0",
-    "doctrine/orm": "^3.5",
-    "doctrine/dbal": "^4.4",
-    "symfony/cache": "^8.0",
-    "monolog/monolog": "^3.0",
-    "firebase/php-jwt": "^7.0"
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "Vortos\\Messaging\\Testing\\": "src/Messaging/Testing/"
-    }
-  },
-  "require-dev": {
-    "kwn/php-rdkafka-stubs": "*",
-    "open-telemetry/api": "^1.0"
-  },
-  "suggest": {
-    "ext-rdkafka": "Required for Kafka transport support",
-    "open-telemetry/api": "Required for OpenTelemetryTracer distributed tracing",
-    "open-telemetry/sdk": "Required for OpenTelemetry SDK instrumentation"
-  }
 }

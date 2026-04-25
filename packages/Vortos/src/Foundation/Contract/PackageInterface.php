@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Vortos\Container\Contract;
+namespace Vortos\Foundation\Contract;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;

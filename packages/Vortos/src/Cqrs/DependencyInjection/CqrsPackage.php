@@ -7,7 +7,7 @@ namespace Vortos\Cqrs\DependencyInjection;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
-use Vortos\Container\Contract\PackageInterface;
+use Vortos\Foundation\Contract\PackageInterface;
 use Vortos\Cqrs\DependencyInjection\Compiler\CommandHandlerPass;
 use Vortos\Cqrs\DependencyInjection\Compiler\IdempotencyKeyPass;
 use Vortos\Cqrs\DependencyInjection\Compiler\QueryHandlerPass;

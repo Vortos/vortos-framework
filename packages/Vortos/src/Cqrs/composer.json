@@ -1,0 +1,18 @@
+{
+    "name": "vortos/vortos-cqrs",
+    "description": "Vortos CQRS — command bus, query bus, projection handlers",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vortos\\Cqrs\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "vortos/vortos-domain": "^1.0",
+        "vortos/vortos-cache": "^1.0",
+        "vortos/vortos-messaging": "^1.0",
+        "vortos/vortos-persistence": "^1.0"
+    }
+}

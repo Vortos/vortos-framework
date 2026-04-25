@@ -8,7 +8,7 @@ use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 use Vortos\Auth\DependencyInjection\Compiler\AuthDiscoveryPass;
-use Vortos\Container\Contract\PackageInterface;
+use Vortos\Foundation\Contract\PackageInterface;
 
 /**
  * Auth package.

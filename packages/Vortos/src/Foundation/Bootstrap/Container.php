@@ -20,9 +20,9 @@ use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 $container = new ContainerBuilder();
 
 // Global parameters
-$container->setParameter('kernel.project_dir', __DIR__ . '/../../../..');
+$container->setParameter('kernel.project_dir', __DIR__ . '/../../../../..');
 $container->setParameter('charset', 'UTF-8');
-$container->setParameter('kernel.log_path', __DIR__ . '/../../../../var/log');
+$container->setParameter('kernel.log_path', __DIR__ . '/../../../../../var/log');
 
 
 
@@ -53,10 +53,10 @@ foreach ($packages as $package) {
 }
 
 
-$loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../../../config'));
+$loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../../../../config'));
 $loader->load('services.php');
 
-$loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../config'));
+$loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../../../config'));
 $loader->load('services.php');
 
 return $container;

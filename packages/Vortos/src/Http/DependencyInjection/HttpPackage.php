@@ -7,7 +7,7 @@ namespace Vortos\Http\DependencyInjection;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
-use Vortos\Container\Contract\PackageInterface;
+use Vortos\Foundation\Contract\PackageInterface;
 use Vortos\Http\DependencyInjection\Compiler\HttpListenerCompilerPass;
 use Vortos\Http\DependencyInjection\Compiler\RegisterEventSubscribersPass;
 use Vortos\Http\DependencyInjection\Compiler\RouteCompilerPass;

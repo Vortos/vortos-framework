@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Vortos\Tracing\DependencyInjection;
 
-use Vortos\Container\Contract\PackageInterface;
+use Vortos\Foundation\Contract\PackageInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\ExtensionInterface;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Vortos\Messaging\DependencyInjection;
 
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
-use Vortos\Container\Contract\PackageInterface;
+use Vortos\Foundation\Contract\PackageInterface;
 use Vortos\Messaging\DependencyInjection\Compiler\HandlerDiscoveryCompilerPass;
 use Vortos\Messaging\DependencyInjection\Compiler\HookDiscoveryCompilerPass;
 use Vortos\Messaging\DependencyInjection\Compiler\MessagingConfigCompilerPass;
