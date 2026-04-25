@@ -1,0 +1,16 @@
+{
+    "name": "vortos/vortos-authorization",
+    "description": "Vortos authorization — policy engine, RBAC, role hierarchy",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vortos\\Authorization\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "vortos/vortos-auth": "^1.0",
+        "symfony/http-kernel": "^7.3"
+    }
+}

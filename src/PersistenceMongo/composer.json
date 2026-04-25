@@ -1,0 +1,16 @@
+{
+    "name": "vortos/vortos-persistence-mongo",
+    "description": "Vortos MongoDB persistence — read side via MongoDB driver",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vortos\\PersistenceMongo\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "vortos/vortos-persistence": "^1.0",
+        "mongodb/mongodb": "^2.1"
+    }
+}

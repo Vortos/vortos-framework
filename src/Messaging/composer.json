@@ -1,0 +1,33 @@
+{
+    "name": "vortos/vortos-messaging",
+    "description": "Vortos messaging — Kafka event bus, outbox pattern, dead letter queue",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vortos\\Messaging\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Vortos\\Messaging\\Testing\\": "src/Testing/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "vortos/vortos-domain": "^1.0",
+        "vortos/vortos-persistence": "^1.0",
+        "vortos/vortos-tracing": "^1.0",
+        "vortos/vortos-cache": "^1.0",
+        "symfony/messenger": "^7.3",
+        "symfony/console": "^7.3",
+        "psr/log": "^3.0",
+        "doctrine/dbal": "^4.4"
+    },
+    "suggest": {
+        "ext-rdkafka": "Required for Kafka transport support"
+    },
+    "require-dev": {
+        "kwn/php-rdkafka-stubs": "*"
+    }
+}

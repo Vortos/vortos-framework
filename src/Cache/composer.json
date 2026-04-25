@@ -1,0 +1,19 @@
+{
+    "name": "vortos/vortos-cache",
+    "description": "Vortos cache — Redis-backed PSR-16 cache with tag invalidation",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vortos\\Cache\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "vortos/vortos-foundation": "^1.0",
+        "psr/simple-cache": "^3.0"
+    },
+    "suggest": {
+        "ext-redis": "Required for RedisAdapter (recommended)"
+    }
+}

@@ -1,0 +1,16 @@
+{
+    "name": "vortos/vortos-persistence",
+    "description": "Vortos persistence core — repository contracts, InMemory adapters, UnitOfWork",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Vortos\\Persistence\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.2",
+        "vortos/vortos-domain": "^1.0",
+        "vortos/vortos-foundation": "^1.0"
+    }
+}
