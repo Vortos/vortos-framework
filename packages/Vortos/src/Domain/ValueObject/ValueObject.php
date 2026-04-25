@@ -3,7 +3,7 @@
 namespace Vortos\Domain\ValueObject;
 
 /**
- * Abstract base class for domain value objects.
+ * Abstract base class for domain value objects
  *
  * Value objects have no identity — they are equal if their values are equal.
  * Two Email('a@example.com') instances are the same value object.
