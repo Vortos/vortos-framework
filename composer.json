@@ -1,6 +1,6 @@
 {
-    "name": "vortos/vortos",
-    "description": "The Vortos Clean Architecture Framework — meta-package",
+    "name": "vortos/vortos-framework",
+    "description": "The Vortos Clean Architecture Framework — all modules",
     "type": "library",
     "license": "MIT",
     "require": {
