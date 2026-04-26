@@ -3,6 +3,8 @@
     "description": "The Vortos Clean Architecture Framework — all modules",
     "type": "library",
     "license": "MIT",
+    "minimum-stability": "alpha",
+    "prefer-stable": true,
     "require": {
         "php": ">=8.2",
         "vortos/vortos-domain": "^1.0",
