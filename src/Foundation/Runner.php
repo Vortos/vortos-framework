@@ -30,7 +30,7 @@ class Runner
         private readonly string $context = 'http',
     ) {
         $this->dumpFilePath = $projectRoot . "/var/cache/container_dump.php";
-        $this->containerPath = $projectRoot . "/packages/Vortos/src/Foundation/Bootstrap/Container.php";
+        $this->containerPath = __DIR__ . "/Bootstrap/Container.php";
         $this->withRoutes = $this->context === 'http';
     }
 
@@ -130,6 +130,9 @@ class Runner
             require_once $this->dumpFilePath;
             $container = new CachedContainer();
         } else {
+
+            $projectRoot = $this->projectRoot;
+
             $container = include $this->containerPath;
 
             $this->configureContainer($container);
@@ -202,3 +205,4 @@ class Runner
         return $response;
     }
 }
+
