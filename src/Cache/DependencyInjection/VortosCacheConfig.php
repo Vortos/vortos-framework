@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Vortos\Cache\DependencyInjection;
 
 use Vortos\Cache\Adapter\RedisAdapter;
+use Vortos\Cache\Adapter\InMemoryAdapter;
 
 /**
  * Fluent configuration object for vortos-cache.
@@ -18,7 +19,7 @@ use Vortos\Cache\Adapter\RedisAdapter;
  *
  *   return static function(VortosCacheConfig $config): void {
  *       $config
- *           ->dsn(sprintf('redis://%s:%s', getenv('REDIS_HOST'), getenv('REDIS_PORT')))
+ *           ->dsn($_ENV['VORTOS_CACHE_DSN'])
  *           ->prefix(getenv('APP_ENV') . '_squaura_')
  *           ->defaultTtl(3600);
  *   };
@@ -41,10 +42,20 @@ use Vortos\Cache\Adapter\RedisAdapter;
  */
 final class VortosCacheConfig
 {
-    private string $driver = RedisAdapter::class;
+    private string $driver;
     private string $dsn = 'redis://redis:6379';
     private string $prefix = 'vortos_';
     private int $defaultTtl = 3600;
+
+    public function __construct()
+    {
+        $this->driver = match ($_ENV['VORTOS_CACHE_DRIVER'] ?? 'in-memory') {
+            'redis' => RedisAdapter::class,
+            default => InMemoryAdapter::class,
+        };
+        $this->dsn = $_ENV['VORTOS_CACHE_DSN'] ?? 'redis://127.0.0.1:6379';
+        $this->prefix = $_ENV['VORTOS_CACHE_PREFIX'] ?? (($_ENV['APP_ENV'] ?? 'dev') . '_' . ($_ENV['APP_NAME'] ?? 'app') . '_');
+    }
 
     /**
      * Set the cache adapter driver.
