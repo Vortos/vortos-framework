@@ -67,6 +67,8 @@ use Vortos\Authorization\Temporal\TemporalAuthorizationManager;
 use Vortos\Authorization\Tracing\AuthorizationTracer;
 use Vortos\Authorization\Http\PermissionsController;
 use Vortos\Authorization\Voter\RoleVoter;
+use Vortos\Config\DependencyInjection\ConfigExtension;
+use Vortos\Config\Stub\ConfigStub;
 
 final class AuthorizationExtension extends Extension
 {
@@ -237,7 +239,7 @@ final class AuthorizationExtension extends Extension
             ->setShared(true)->setPublic(true);
 
         // Redis-backed scoped + temporal stores
-        if (class_exists(\Redis::class)) {
+        if ($container->hasDefinition(\Redis::class)) {
             $container->register(RedisEmergencyDenyList::class, RedisEmergencyDenyList::class)
                 ->setArgument('$redis', new Reference(\Redis::class))
                 ->setShared(true)
@@ -310,7 +312,7 @@ final class AuthorizationExtension extends Extension
         $container->getDefinition(PolicyEngine::class)
             ->setArgument('$scopedPermissions', new Reference(ScopedPermissionStoreInterface::class));
 
-        if (class_exists(\Redis::class)) {
+        if ($container->hasDefinition(\Redis::class)) {
             $container->register(RoleGenerationStore::class, RoleGenerationStore::class)
                 ->setArgument('$redis', new Reference(\Redis::class))
                 ->setShared(true)
@@ -344,7 +346,7 @@ final class AuthorizationExtension extends Extension
 
         $innerResolver = DatabasePermissionResolver::class;
 
-        if (class_exists(\Redis::class)) {
+        if ($container->hasDefinition(\Redis::class)) {
             $container->register(CachedPermissionResolver::class, CachedPermissionResolver::class)
                 ->setArgument('$inner', new Reference(DatabasePermissionResolver::class))
                 ->setArgument('$redis', new Reference(\Redis::class))
@@ -458,5 +460,10 @@ final class AuthorizationExtension extends Extension
                 $definition->setPublic(false);
             },
         );
+
+        $container->register('vortos.config_stub.authorization', ConfigStub::class)
+            ->setArguments(['authorization', __DIR__ . '/../stubs/authorization.php'])
+            ->addTag(ConfigExtension::STUB_TAG)
+            ->setPublic(false);
     }
 }
