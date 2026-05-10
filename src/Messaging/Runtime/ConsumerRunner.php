@@ -13,6 +13,7 @@ use Vortos\Messaging\Bus\Stamp\EventIdStamp;
 use Vortos\Messaging\Bus\Stamp\TimestampStamp;
 use Vortos\Messaging\Contract\ConsumerInterface;
 use Vortos\Messaging\Contract\ConsumerLocatorInterface;
+use Vortos\Messaging\Contract\ProducerInterface;
 use Vortos\Messaging\DeadLetter\DeadLetterWriter;
 use Vortos\Messaging\Middleware\MiddlewareStack;
 use Vortos\Messaging\Registry\ConsumerRegistry;
@@ -25,6 +26,7 @@ use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Uid\UuidV7;
 
 /**
  * Orchestrates the full message processing pipeline for a named consumer.
@@ -48,22 +50,30 @@ final class ConsumerRunner
         private SerializerLocator $serializerLocator,
         private MiddlewareStack $middlewareStack,
         private DeadLetterWriter $deadLetterWriter,
+        private ProducerInterface $producer,
         private CacheInterface $cache,
         private ConsumerLocatorInterface $consumerLocator,
         private LoggerInterface $logger,
         private ServiceLocator $handlerLocator,
         private RetryDecider $retryDecider,
         private ConsumerRegistry $consumerRegistry,
-        private int $idempotencyTtl = 86400
+        private int $defaultIdempotencyTtl = 86400,
     ) {}
 
-    public function run(string $consumerName): void
+    public function run(string $consumerName, int $maxMessages = 0): void
     {
         $this->activeConsumer = $this->consumerLocator->get($consumerName);
+        $processed = 0;
 
         $this->activeConsumer->consume(
             $consumerName,
-            fn(ReceivedMessage $message) => $this->handleMessage($consumerName, $message, $this->activeConsumer)
+            function (ReceivedMessage $message) use ($consumerName, &$processed, $maxMessages): void {
+                $this->handleMessage($consumerName, $message, $this->activeConsumer);
+                $processed++;
+                if ($maxMessages > 0 && $processed >= $maxMessages) {
+                    $this->activeConsumer->stop();
+                }
+            }
         );
     }
 
@@ -83,6 +93,22 @@ final class ConsumerRunner
             );
 
             $consumer->reject($message, false);
+
+            return;
+        }
+
+        $descriptors = $this->handlerRegistry->getHandlers($consumerName, $eventClass);
+
+        if (empty($descriptors)) {
+            $this->logger->warning(
+                'No handlers found for event',
+                [
+                    'consumer' => $consumerName,
+                    'event_class' => $eventClass
+                ]
+            );
+
+            $consumer->acknowledge($message);
 
             return;
         }
@@ -107,24 +133,8 @@ final class ConsumerRunner
             return;
         }
 
-        $descriptors = $this->handlerRegistry->getHandlers($consumerName, $eventClass);
-
-        if (empty($descriptors)) {
-            $this->logger->warning(
-                'No handlers found for event',
-                [
-                    'consumer' => $consumerName,
-                    'event_class' => $eventClass
-                ]
-            );
-
-            $consumer->acknowledge($message);
-
-            return;
-        }
-
-        $eventId = $message->headers['event_id'] ?? bin2hex(random_bytes(8));
-        $correlationId = $message->headers['correlation_id'] ?? bin2hex(random_bytes(8));
+        $eventId = $message->headers['event_id'] ?? (new UuidV7())->toRfc4122();
+        $correlationId = $message->headers['correlation_id'] ?? (new UuidV7())->toRfc4122();
 
         $envelope = new Envelope(
             $event,
@@ -133,11 +143,6 @@ final class ConsumerRunner
                 new CorrelationIdStamp($correlationId),
                 new ConsumerStamp($consumerName)
             ]
-        );
-
-        file_put_contents(
-            '/var/www/html/var/log/handler_discovery_debug.txt',
-            print_r($descriptors, true)
         );
 
         $allSucceeded = true;
@@ -181,24 +186,26 @@ final class ConsumerRunner
         };
 
         try {
+            $consumerConfig = $this->consumerRegistry->get($consumerName);
+        } catch (\Throwable) {
+            $consumerConfig = [];
+        }
+
+        $idempotencyTtl = $consumerConfig['idempotencyTtl'] ?? $this->defaultIdempotencyTtl;
+
+        try {
             $this->middlewareStack->process($envelope, $handlerCallable);
 
             if (isset($cacheKey)) {
-                $this->cache->set($cacheKey, true, $this->idempotencyTtl);
+                $this->cache->set($cacheKey, true, $idempotencyTtl);
             }
 
             return true;
         } catch (\Throwable $e) {
-
-            try {
-                $consumerConfig = $this->consumerRegistry->get($consumerName);
-                $retryArray = $consumerConfig['retry'] ?? [];
-                $retryPolicy = !empty($retryArray)
-                    ? RetryPolicy::fromArray($retryArray)
-                    : RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
-            } catch (\Throwable) {
-                $retryPolicy = RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
-            }
+            $retryArray = $consumerConfig['retry'] ?? [];
+            $retryPolicy = !empty($retryArray)
+                ? RetryPolicy::fromArray($retryArray)
+                : RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
 
             $attempt = 1;
             $lastException = $e;
@@ -211,11 +218,8 @@ final class ConsumerRunner
                 try {
                     $this->middlewareStack->process($envelope, $handlerCallable);
 
-                    if ($eventId !== null) {
-
-                        if (isset($cacheKey)) {
-                            $this->cache->set($cacheKey, true, $this->idempotencyTtl);
-                        }
+                    if (isset($cacheKey)) {
+                        $this->cache->set($cacheKey, true, $idempotencyTtl);
                     }
 
                     return true;
@@ -227,13 +231,25 @@ final class ConsumerRunner
 
             $this->deadLetterWriter->write(
                 transportName: $message->transportName,
-                eventClass: $message->headers['event_class'],
+                eventClass: $message->headers['event_class'] ?? '',
                 payload: $message->payload,
                 headers: $message->headers,
                 failureReason: $lastException->getMessage(),
                 exceptionClass: get_class($lastException),
                 attemptCount: 1 + $retryPolicy->maxAttempts
             );
+
+            $dlqTransport = $consumerConfig['dlq'] ?? '';
+            if ($dlqTransport !== '') {
+                try {
+                    $this->producer->produce($dlqTransport, $envelope->getMessage(), $message->headers);
+                } catch (\Throwable $dlqException) {
+                    $this->logger->error('Failed to produce message to DLQ transport', [
+                        'dlq_transport' => $dlqTransport,
+                        'exception'     => $dlqException->getMessage(),
+                    ]);
+                }
+            }
 
             return false;
         }
