@@ -25,12 +25,51 @@ return static function (VortosMetricsConfig $config): void {
     ;
 
     // Disable auto-instrumentation for specific modules.
-    // Useful for high-cardinality modules (Cache, Persistence) in prod.
+    // Useful when you want to replace a framework module metric with your own
+    // lower-cardinality instrumentation.
     //
     // $config->disableModule(
     //     MetricsModule::Cache,
     //     MetricsModule::Persistence,
     // );
+
+    // Application metrics must be declared before they are recorded.
+    // The definition owns the Prometheus HELP text, allowed label names, and
+    // histogram buckets. Runtime calls must use exactly the same labels.
+    //
+    // Example usage in application code:
+    //   $metrics->counter('orders_created_total', ['channel' => 'web'])->increment();
+    //   $metrics->histogram('checkout_duration_ms', ['variant' => 'one_page'])->observe($durationMs);
+    //
+    // Keep labels low-cardinality. Use values like route, status, command, tenant tier,
+    // or feature variant. Never use user IDs, emails, request IDs, raw URLs, or order IDs.
+    //
+    // $config
+    //     ->counter(
+    //         'orders_created_total',
+    //         'Total orders created by sales channel.',
+    //         ['channel'],
+    //     )
+    //     ->histogram(
+    //         'checkout_duration_ms',
+    //         'Checkout duration in milliseconds by checkout variant.',
+    //         ['variant'],
+    //         [10, 25, 50, 100, 250, 500, 1000, 2500],
+    //     )
+    // ;
+
+    // Operational messaging gauges are built in when the Messaging module and
+    // Doctrine DBAL are installed:
+    //
+    //   outbox_backlog_size{transport,status}
+    //   outbox_oldest_pending_age_seconds{transport}
+    //   dlq_backlog_size{transport,event}
+    //   dlq_oldest_failed_age_seconds{transport}
+    //
+    // Prometheus refreshes these during /metrics scrapes. Push backends such as
+    // StatsD should run this from cron or a worker:
+    //
+    //   php bin/console vortos:metrics:collect
 
     // Prometheus configuration — only relevant when adapter = Prometheus.
     //
