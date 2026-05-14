@@ -15,6 +15,7 @@ use Vortos\Messaging\Contract\ConsumerInterface;
 use Vortos\Messaging\Contract\ConsumerLocatorInterface;
 use Vortos\Messaging\Contract\ProducerInterface;
 use Vortos\Messaging\DeadLetter\DeadLetterWriter;
+use Vortos\Messaging\Exception\DeadLetterWriteException;
 use Vortos\Messaging\Middleware\MiddlewareStack;
 use Vortos\Messaging\Registry\ConsumerRegistry;
 use Vortos\Messaging\Registry\HandlerRegistry;
@@ -34,6 +35,8 @@ use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Uid\UuidV7;
+use Vortos\Messaging\Attribute\Header\Header;
+use Vortos\Messaging\Bus\Stamp\HeadersStamp;
 use Vortos\Tracing\Contract\TracingInterface;
 
 /**
@@ -52,6 +55,12 @@ use Vortos\Tracing\Contract\TracingInterface;
 final class ConsumerRunner
 {
     private ?ConsumerInterface $activeConsumer = null;
+    private string $replaySecret = '';
+
+    public function setReplaySecret(string $secret): void
+    {
+        $this->replaySecret = $secret;
+    }
 
     public function __construct(
         private HandlerRegistry $handlerRegistry,
@@ -171,18 +180,36 @@ final class ConsumerRunner
             [
                 new EventIdStamp($eventId),
                 new CorrelationIdStamp($correlationId),
-                new ConsumerStamp($consumerName)
+                new ConsumerStamp($consumerName),
+                new HeadersStamp($message->headers)
             ]
         );
 
         $allSucceeded = true;
 
-        foreach ($descriptors as $descriptor) {
-            $succeeded = $this->processHandler($consumerName, $descriptor, $envelope, $message);
+        $target = $message->headers['x-vortos-target-handler'] ?? null;
+        $replaySig = $message->headers['x-vortos-replay-sig'] ?? '';
+        $isTrustedReplay = $this->replaySecret !== ''
+            && $target !== null
+            && hash_equals(hash_hmac('sha256', $target, $this->replaySecret), $replaySig);
 
-            if (!$succeeded) {
-                $allSucceeded = false;
+        if ($isTrustedReplay) {
+            $descriptors = array_filter($descriptors, fn($d) => $d['handlerId'] === $target);
+        }
+
+        try {
+            foreach ($descriptors as $descriptor) {
+                $succeeded = $this->processHandler($consumerName, $descriptor, $envelope, $message, $isTrustedReplay);
+
+                if (!$succeeded) {
+                    $allSucceeded = false;
+                }
             }
+        } catch (DeadLetterWriteException $e) {
+            $this->logger->error('Dead letter write failed; offset not committed', ['exception' => $e->getMessage()]);
+            $span?->setStatus('error');
+            $span?->end();
+            return;
         }
 
         if ($allSucceeded) {
@@ -198,8 +225,9 @@ final class ConsumerRunner
         $span?->end();
     }
 
-    private function processHandler(string $consumerName, array $descriptor, Envelope $envelope, ReceivedMessage $message): bool
+    private function processHandler(string $consumerName, array $descriptor, Envelope $envelope, ReceivedMessage $message, bool $isTrustedReplay = false): bool
     {
+        $start = hrtime(true);
         $eventId = $envelope->last(EventIdStamp::class)?->eventId ?? null;
 
         $cacheKey = null;
@@ -227,7 +255,29 @@ final class ConsumerRunner
             $consumerConfig = [];
         }
 
+        $retryArray = $consumerConfig['retry'] ?? [];
+        $retryPolicy = !empty($retryArray)
+            ? RetryPolicy::fromArray($retryArray)
+            : RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
+
         $idempotencyTtl = $consumerConfig['idempotencyTtl'] ?? $this->defaultIdempotencyTtl;
+
+        $globalReplays = $isTrustedReplay ? ($message->headers['x-vortos-global-replays'] ?? 0) : 0;
+
+        if ($globalReplays > $retryPolicy->maxReplayLimit) {
+            $eventClass = $message->headers['event_class'] ?? 'unknown';
+            $eventName = TelemetryLabels::classShortName($eventClass);
+            $consumerLabel = TelemetryLabels::safe($consumerName);
+
+            $this->logger->error("Hard discarding message: exceeded global replay limit.", [
+                'handler' => $descriptor['handlerId'],
+                'event' => $eventClass,
+                'limit' => $retryPolicy->maxReplayLimit
+            ]);
+
+            $this->recordMessage($consumerLabel, $eventName, 'discarded', $start);
+            return true;
+        }
 
         try {
             $this->middlewareStack->process($envelope, $handlerCallable);
@@ -238,16 +288,15 @@ final class ConsumerRunner
 
             return true;
         } catch (\Throwable $e) {
-            $retryArray = $consumerConfig['retry'] ?? [];
-            $retryPolicy = !empty($retryArray)
-                ? RetryPolicy::fromArray($retryArray)
-                : RetryPolicy::exponential(attempts: 3, initialDelayMs: 500);
 
             $attempt = 1;
             $lastException = $e;
 
+            $maxPollIntervalMs = $consumerConfig['kafka']['maxPollIntervalMs'] ?? 300000;
+            $delayCap = (int) ($maxPollIntervalMs / max(1, $retryPolicy->maxAttempts));
+
             while ($this->retryDecider->shouldRetry($retryPolicy, $attempt)) {
-                $delay = $this->retryDecider->getDelayMs($retryPolicy, $attempt);
+                $delay = min($this->retryDecider->getDelayMs($retryPolicy, $attempt), $delayCap);
 
                 usleep($delay * 1000);
 
@@ -273,15 +322,20 @@ final class ConsumerRunner
                 }
             }
 
-            $this->deadLetterWriter->write(
+            $written = $this->deadLetterWriter->write(
                 transportName: $message->transportName,
                 eventClass: $message->headers['event_class'] ?? '',
+                handlerId: $descriptor['handlerId'],
                 payload: $message->payload,
                 headers: $message->headers,
                 failureReason: $lastException->getMessage(),
                 exceptionClass: get_class($lastException),
                 attemptCount: 1 + $retryPolicy->maxAttempts
             );
+
+            if (!$written) {
+                throw new DeadLetterWriteException('Dead letter persistence failed; Kafka offset will not be committed.');
+            }
 
             $dlqTransport = $consumerConfig['dlq'] ?? '';
             if ($dlqTransport !== '') {
@@ -318,10 +372,16 @@ final class ConsumerRunner
     private function resolveArguments(array $descriptor, Envelope $envelope): array
     {
         $args = [];
+        $allHeaders = $envelope->last(HeadersStamp::class)?->headers ?? [];
 
         foreach ($descriptor['parameters'] as $param) {
             if ($param['type'] === 'event') {
                 $args[] = $envelope->getMessage();
+                continue;
+            }
+
+            if ($param['attribute'] === Header::class) {
+                $args[] = $allHeaders[$param['headerName']] ?? null;
                 continue;
             }
 

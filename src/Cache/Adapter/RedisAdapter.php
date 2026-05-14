@@ -51,6 +51,8 @@ final class RedisAdapter implements TaggedCacheInterface
         private \Redis $redis,
         private string $prefix = '',
         private int $defaultTtl = 3600,
+        /** @var list<class-string> */
+        private array $allowedClasses = [],
     ) {}
 
     /**
@@ -83,11 +85,11 @@ final class RedisAdapter implements TaggedCacheInterface
         $prefixed = $this->prefixedKey($key);
         $serialized = serialize($value);
 
-        if ($seconds > 0) {
-            return (bool) $this->redis->setex($prefixed, $seconds, $serialized);
+        if ($seconds <= 0) {
+            return false;
         }
 
-        return (bool) $this->redis->set($prefixed, $serialized);
+        return (bool) $this->redis->setex($prefixed, $seconds, $serialized);
     }
 
     /**
@@ -167,15 +169,15 @@ final class RedisAdapter implements TaggedCacheInterface
             return true;
         }
 
+        if ($seconds <= 0) {
+            return false;
+        }
+
         $this->redis->multi(\Redis::PIPELINE);
         foreach ($valueArray as $key => $value) {
             $prefixed = $this->prefixedKey($key);
             $serialized = serialize($value);
-            if ($seconds > 0) {
-                $this->redis->setex($prefixed, $seconds, $serialized);
-            } else {
-                $this->redis->set($prefixed, $serialized);
-            }
+            $this->redis->setex($prefixed, $seconds, $serialized);
         }
         $replies = $this->redis->exec();
 
@@ -313,20 +315,25 @@ final class RedisAdapter implements TaggedCacheInterface
 
         if ($ttl instanceof \DateInterval) {
             $seconds = (new \DateTimeImmutable())->add($ttl)->getTimestamp() - time();
-            return max(1, $seconds);
+            return max(0, $seconds);
         }
 
-        return $ttl;
+        return max(0, $ttl);
     }
 
     /**
      * Unserialize a raw Redis string, returning $default if the data is corrupted.
      *
      * `b:0;` is the serialized form of false — must not be treated as a failure.
+     *
+     * Object instantiation is restricted to $allowedClasses. When empty, only scalars
+     * and arrays are permitted — objects trigger a deserialization failure and return
+     * $default. Configure allowed classes via VortosCacheConfig::allowSerializedClasses().
      */
     private function safeUnserialize(string $raw, mixed $default): mixed
     {
-        $value = unserialize($raw);
+        $options = ['allowed_classes' => $this->allowedClasses ?: false];
+        $value = unserialize($raw, $options);
 
         if ($value === false && $raw !== 'b:0;') {
             return $default;
