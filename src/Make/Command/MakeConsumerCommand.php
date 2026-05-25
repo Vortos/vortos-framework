@@ -102,6 +102,9 @@ final class MakeConsumerCommand extends Command
             $output,
         );
 
+        $output->writeln('');
+        $output->writeln(sprintf('<info>%sHandler</info> is auto-registered via <info>#[AsEventHandler]</info> — no MessagingConfig wiring needed.', $name));
+
         return Command::SUCCESS;
     }
 

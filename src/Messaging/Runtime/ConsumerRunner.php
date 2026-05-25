@@ -4,11 +4,18 @@ declare(strict_types=1);
 
 namespace Vortos\Messaging\Runtime;
 
+use Vortos\Domain\Event\EventEnvelope;
+use Vortos\Domain\Event\Metadata;
+use Vortos\Messaging\Attribute\Header\CausationId;
 use Vortos\Messaging\Attribute\Header\CorrelationId;
 use Vortos\Messaging\Attribute\Header\MessageId;
+use Vortos\Messaging\Attribute\Header\TenantId;
 use Vortos\Messaging\Attribute\Header\Timestamp;
+use Vortos\Messaging\Attribute\Header\TraceId;
+use Vortos\Messaging\Attribute\Header\UserId;
 use Vortos\Messaging\Bus\Stamp\ConsumerStamp;
 use Vortos\Messaging\Bus\Stamp\CorrelationIdStamp;
+use Vortos\Messaging\Bus\Stamp\EventEnvelopeStamp;
 use Vortos\Messaging\Bus\Stamp\EventIdStamp;
 use Vortos\Messaging\Bus\Stamp\TimestampStamp;
 use Vortos\Messaging\Contract\ConsumerInterface;
@@ -19,6 +26,8 @@ use Vortos\Messaging\Exception\DeadLetterWriteException;
 use Vortos\Messaging\Middleware\MiddlewareStack;
 use Vortos\Messaging\Registry\ConsumerRegistry;
 use Vortos\Messaging\Registry\HandlerRegistry;
+use Vortos\Messaging\Hook\HandlerOutcome;
+use Vortos\Messaging\Hook\HookRunner;
 use Vortos\Messaging\Retry\RetryDecider;
 use Vortos\Messaging\Retry\RetryPolicy;
 use Vortos\Messaging\Serializer\SerializerLocator;
@@ -52,7 +61,7 @@ use Vortos\Tracing\Contract\TracingInterface;
  * all broker communication is delegated to ConsumerInterface, all storage
  * to DeadLetterWriter and CacheInterface.
  */
-final class ConsumerRunner
+final class ConsumerRunner implements ConsumerRunnerInterface
 {
     private ?ConsumerInterface $activeConsumer = null;
     private string $replaySecret = '';
@@ -77,6 +86,7 @@ final class ConsumerRunner
         private int $defaultIdempotencyTtl = 86400,
         private ?FrameworkTelemetry $telemetry = null,
         private ?TracingInterface $tracer = null,
+        private ?HookRunner $hookRunner = null,
     ) {}
 
     public function run(string $consumerName, int $maxMessages = 0): void
@@ -105,8 +115,9 @@ final class ConsumerRunner
     private function handleMessage(string $consumerName, ReceivedMessage $message, ConsumerInterface $consumer): void
     {
         $start = hrtime(true);
-        $eventClass = $message->headers['event_class'] ?? null;
-        $eventName = $eventClass !== null ? TelemetryLabels::classShortName($eventClass) : 'unknown';
+        // Accept both payload_type (current) and event_class (legacy/backward-compat)
+        $payloadType = $message->headers['payload_type'] ?? $message->headers['event_class'] ?? null;
+        $eventName = $payloadType !== null ? TelemetryLabels::classShortName($payloadType) : 'unknown';
         $consumerLabel = TelemetryLabels::safe($consumerName);
         $span = $this->tracer?->startSpan('messaging.consume', [
             'vortos.module' => ObservabilityModule::Messaging,
@@ -116,72 +127,81 @@ final class ConsumerRunner
             'messaging.message.type' => $eventName,
         ]);
 
-        if ($eventClass === null) {
-            $this->logger->warning(
-                'Received message with no event_class header'
-            );
-
+        if ($payloadType === null) {
+            $this->logger->warning('Received message with no payload_type header');
             $consumer->reject($message, false);
             $this->recordMessage($consumerLabel, $eventName, 'rejected', $start);
             $span?->setStatus('error');
             $span?->end();
-
             return;
         }
 
-        $descriptors = $this->handlerRegistry->getHandlers($consumerName, $eventClass);
+        $descriptors = $this->handlerRegistry->getHandlers($consumerName, $payloadType);
 
         if (empty($descriptors)) {
-            $this->logger->warning(
-                'No handlers found for event',
-                [
-                    'consumer' => $consumerName,
-                    'event_class' => $eventClass
-                ]
-            );
-
+            $this->logger->warning('No handlers found for event', [
+                'consumer'     => $consumerName,
+                'payload_type' => $payloadType,
+            ]);
             $consumer->acknowledge($message);
             $this->recordMessage($consumerLabel, $eventName, 'ignored', $start);
             $span?->setStatus('ok');
             $span?->end();
-
             return;
         }
 
         $serializer = $this->serializerLocator->locate('json');
 
         try {
-
-            $event = $serializer->deserialize($message->payload, $eventClass);
+            $payload = $serializer->deserialize($message->payload, $payloadType);
         } catch (\Throwable $e) {
-
-            $this->logger->error(
-                'Failed to deserialize message',
-                [
-                    'event_class' => $eventClass,
-                    'exception' => $e
-                ]
-            );
-
+            $this->logger->error('Failed to deserialize message', [
+                'payload_type' => $payloadType,
+                'exception'    => $e,
+            ]);
             $consumer->reject($message, false);
             $this->recordMessage($consumerLabel, $eventName, 'deserialize_failed', $start);
             $span?->recordException($e);
             $span?->setStatus('error');
             $span?->end();
-
             return;
         }
 
-        $eventId = $message->headers['event_id'] ?? (new UuidV7())->toRfc4122();
+        $eventId       = $message->headers['event_id'] ?? (new UuidV7())->toRfc4122();
         $correlationId = $message->headers['correlation_id'] ?? (new UuidV7())->toRfc4122();
 
-        $envelope = new Envelope(
-            $event,
+        // Reconstruct the full domain EventEnvelope from wire headers + deserialized payload.
+        // Built before the Messenger envelope so it can be attached as a stamp.
+        $occurredAt = isset($message->headers['occurred_at'])
+            ? new \DateTimeImmutable($message->headers['occurred_at'])
+            : new \DateTimeImmutable();
+
+        $domainEnvelope = new EventEnvelope(
+            eventId:          $eventId,
+            aggregateId:      $message->headers['aggregate_id'] ?? '',
+            aggregateType:    $message->headers['aggregate_type'] ?? '',
+            aggregateVersion: (int) ($message->headers['aggregate_version'] ?? 0),
+            payloadType:      $payloadType,
+            schemaVersion:    (int) ($message->headers['schema_version'] ?? 1),
+            occurredAt:       $occurredAt,
+            payload:          $payload,
+            metadata:         new Metadata(
+                correlationId: $message->headers['correlation_id'] ?: null,
+                causationId:   $message->headers['causation_id'] ?: null,
+                traceId:       $message->headers['trace_id'] ?: null,
+                tenantId:      $message->headers['tenant_id'] ?? null,
+                userId:        $message->headers['user_id'] ?? null,
+            ),
+        );
+
+        $messengerEnvelope = new Envelope(
+            $payload,
             [
                 new EventIdStamp($eventId),
                 new CorrelationIdStamp($correlationId),
                 new ConsumerStamp($consumerName),
-                new HeadersStamp($message->headers)
+                new HeadersStamp($message->headers),
+                new EventEnvelopeStamp($domainEnvelope),
             ]
         );
 
@@ -199,8 +219,9 @@ final class ConsumerRunner
 
         try {
             foreach ($descriptors as $descriptor) {
-                $succeeded = $this->processHandler($consumerName, $descriptor, $envelope, $message, $isTrustedReplay);
-
+                $succeeded = $this->processHandler(
+                    $consumerName, $descriptor, $messengerEnvelope, $domainEnvelope, $message, $isTrustedReplay
+                );
                 if (!$succeeded) {
                     $allSucceeded = false;
                 }
@@ -211,6 +232,8 @@ final class ConsumerRunner
             $span?->end();
             return;
         }
+
+        $this->hookRunner?->runAfterConsume($domainEnvelope, $consumerName);
 
         if ($allSucceeded) {
             $consumer->acknowledge($message);
@@ -225,10 +248,13 @@ final class ConsumerRunner
         $span?->end();
     }
 
-    private function processHandler(string $consumerName, array $descriptor, Envelope $envelope, ReceivedMessage $message, bool $isTrustedReplay = false): bool
+    private function processHandler(string $consumerName, array $descriptor, Envelope $envelope, EventEnvelope $domainEnvelope, ReceivedMessage $message, bool $isTrustedReplay = false): bool
     {
-        $start = hrtime(true);
-        $eventId = $envelope->last(EventIdStamp::class)?->eventId ?? null;
+        $start     = hrtime(true);
+        $handlerId = $descriptor['handlerId'];
+        $eventId   = $envelope->last(EventIdStamp::class)?->eventId ?? null;
+
+        $this->hookRunner?->runBeforeHandler($domainEnvelope, $consumerName, $handlerId);
 
         // Load consumer config before the idempotency claim — TTL is needed for setNx
         try {
@@ -252,6 +278,7 @@ final class ConsumerRunner
             if (!$descriptor['idempotent']) {
                 if (!$this->cache->setNx($cacheKey, true, $idempotencyTtl)) {
                     $this->logger->debug('Skipping duplicate handler execution');
+                    $this->hookRunner?->runAfterHandler($domainEnvelope, $consumerName, $handlerId, HandlerOutcome::SkippedIdempotent, 1, 0.0);
                     return true;
                 }
             }
@@ -259,9 +286,9 @@ final class ConsumerRunner
 
         $handlerService = $this->handlerLocator->get($descriptor['serviceId']);
 
-        $handlerCallable = function (Envelope $e) use ($handlerService, $descriptor): Envelope {
+        $handlerCallable = function (Envelope $e) use ($handlerService, $descriptor, $domainEnvelope): Envelope {
             $handlerService->{$descriptor['method']}(
-                ...$this->resolveArguments($descriptor, $e)
+                ...$this->resolveArguments($descriptor, $e, $domainEnvelope)
             );
             return $e;
         };
@@ -271,17 +298,17 @@ final class ConsumerRunner
         $globalReplays = $isTrustedReplay ? (int) ($message->headers['x-vortos-global-replays'] ?? 0) : 0;
 
         if ($globalReplays > $retryPolicy->maxReplayLimit) {
-            $eventClass = $message->headers['event_class'] ?? 'unknown';
-            $eventName = TelemetryLabels::classShortName($eventClass);
+            $eventName = TelemetryLabels::classShortName($domainEnvelope->payloadType);
             $consumerLabel = TelemetryLabels::safe($consumerName);
 
             $this->logger->error("Hard discarding message: exceeded global replay limit.", [
-                'handler' => $descriptor['handlerId'],
-                'event' => $eventClass,
-                'limit' => $retryPolicy->maxReplayLimit
+                'handler'      => $handlerId,
+                'payload_type' => $domainEnvelope->payloadType,
+                'limit'        => $retryPolicy->maxReplayLimit,
             ]);
 
             $this->recordMessage($consumerLabel, $eventName, 'discarded', $start);
+            $this->hookRunner?->runAfterHandler($domainEnvelope, $consumerName, $handlerId, HandlerOutcome::DiscardedReplayLimit, 1, (hrtime(true) - $start) / 1_000_000);
             return true;
         }
 
@@ -293,11 +320,14 @@ final class ConsumerRunner
                 $this->cache->set($cacheKey, true, $idempotencyTtl);
             }
 
+            $this->hookRunner?->runAfterHandler($domainEnvelope, $consumerName, $handlerId, HandlerOutcome::Succeeded, 1, (hrtime(true) - $start) / 1_000_000);
             return true;
         } catch (\Throwable $e) {
 
             $attempt = 1;
             $lastException = $e;
+
+            $this->hookRunner?->runAfterHandler($domainEnvelope, $consumerName, $handlerId, HandlerOutcome::AttemptFailed, 1, (hrtime(true) - $start) / 1_000_000, $e);
 
             $maxPollIntervalMs = $consumerConfig['kafka']['maxPollIntervalMs'] ?? 300000;
             $delayCap = (int) ($maxPollIntervalMs / max(1, $retryPolicy->maxAttempts));
@@ -314,6 +344,7 @@ final class ConsumerRunner
                         $this->cache->set($cacheKey, true, $idempotencyTtl);
                     }
 
+                    $this->hookRunner?->runAfterHandler($domainEnvelope, $consumerName, $handlerId, HandlerOutcome::SucceededAfterRetries, $attempt + 1, (hrtime(true) - $start) / 1_000_000);
                     return true;
                 } catch (\Throwable $e) {
                     $this->telemetry?->increment(
@@ -321,11 +352,12 @@ final class ConsumerRunner
                         FrameworkMetric::MessagingMessageRetriesTotal,
                         FrameworkMetricLabels::of(
                             MetricLabelValue::of(MetricLabel::Consumer, $consumerName),
-                            MetricLabelValue::of(MetricLabel::Event, TelemetryLabels::classShortName($message->headers['event_class'] ?? 'unknown')),
+                            MetricLabelValue::of(MetricLabel::Event, TelemetryLabels::classShortName($domainEnvelope->payloadType)),
                         ),
                     );
                     $attempt++;
                     $lastException = $e;
+                    $this->hookRunner?->runAfterHandler($domainEnvelope, $consumerName, $handlerId, HandlerOutcome::AttemptFailed, $attempt, (hrtime(true) - $start) / 1_000_000, $e);
                 }
             }
 
@@ -335,14 +367,14 @@ final class ConsumerRunner
             }
 
             $written = $this->deadLetterWriter->write(
-                transportName: $message->transportName,
-                eventClass: $message->headers['event_class'] ?? '',
-                handlerId: $descriptor['handlerId'],
-                payload: $message->payload,
-                headers: $message->headers,
-                failureReason: $lastException->getMessage(),
+                transportName:  $message->transportName,
+                eventClass:     $domainEnvelope->payloadType,
+                handlerId:      $handlerId,
+                payload:        $message->payload,
+                headers:        $message->headers,
+                failureReason:  $lastException->getMessage(),
                 exceptionClass: get_class($lastException),
-                attemptCount: 1 + $retryPolicy->maxAttempts
+                attemptCount:   1 + $retryPolicy->maxAttempts,
             );
 
             if (!$written) {
@@ -361,6 +393,7 @@ final class ConsumerRunner
                 }
             }
 
+            $this->hookRunner?->runAfterHandler($domainEnvelope, $consumerName, $handlerId, HandlerOutcome::DeadLettered, $attempt, (hrtime(true) - $start) / 1_000_000, $lastException);
             return false;
         }
     }
@@ -381,7 +414,7 @@ final class ConsumerRunner
         $this->telemetry?->observe(ObservabilityModule::Messaging, FrameworkMetric::MessagingMessageDurationMs, $durationLabels, (hrtime(true) - $start) / 1_000_000);
     }
 
-    private function resolveArguments(array $descriptor, Envelope $envelope): array
+    private function resolveArguments(array $descriptor, Envelope $envelope, EventEnvelope $domainEnvelope): array
     {
         $args = [];
         $allHeaders = $envelope->last(HeadersStamp::class)?->headers ?? [];
@@ -392,16 +425,30 @@ final class ConsumerRunner
                 continue;
             }
 
+            if ($param['type'] === 'envelope') {
+                $args[] = $domainEnvelope;
+                continue;
+            }
+
+            if ($param['type'] === 'metadata') {
+                $args[] = $domainEnvelope->metadata;
+                continue;
+            }
+
             if ($param['attribute'] === Header::class) {
                 $args[] = $allHeaders[$param['headerName']] ?? null;
                 continue;
             }
 
-            // header injection
+            // header stamp / metadata injection
             $args[] = match ($param['attribute']) {
                 MessageId::class     => $envelope->last(EventIdStamp::class)?->eventId ?? '',
                 CorrelationId::class => $envelope->last(CorrelationIdStamp::class)?->correlationId ?? '',
                 Timestamp::class     => $envelope->last(TimestampStamp::class)?->occurredAt ?? new \DateTimeImmutable(),
+                CausationId::class   => $domainEnvelope->metadata->causationId,
+                TraceId::class       => $domainEnvelope->metadata->traceId,
+                TenantId::class      => $domainEnvelope->metadata->tenantId,
+                UserId::class        => $domainEnvelope->metadata->userId,
                 default              => null,
             };
         }

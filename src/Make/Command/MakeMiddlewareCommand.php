@@ -57,6 +57,9 @@ final class MakeMiddlewareCommand extends Command
             $output,
         );
 
+        $output->writeln('');
+        $output->writeln(sprintf('<info>%sMiddleware</info> is auto-registered via <info>#[AsMiddleware]</info> — no MessagingConfig wiring needed.', $name));
+
         return Command::SUCCESS;
     }
 }

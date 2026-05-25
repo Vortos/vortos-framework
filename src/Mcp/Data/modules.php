@@ -6,12 +6,13 @@ return [
     'domain' => [
         'description' => 'Base classes for DDD/CQRS building blocks. No DI extension — pure PHP abstractions.',
         'provides'    => [
-            'AggregateRoot' => 'Base class for all aggregates. Holds domain events via recordEvent(). pullDomainEvents() drains and returns them.',
-            'AggregateId'   => 'Base class for typed IDs. Wraps a UUID v7 string.',
-            'DomainEvent'   => 'Base class for domain events. Carries eventId (UUID v7) and occurredAt.',
-            'ValueObject'   => 'Base class for value objects. Implements equality by value.',
-            'Command'       => 'Base DTO for CQRS commands.',
-            'Query'         => 'Base DTO for CQRS queries.',
+            'AggregateRoot'  => 'Base class for all aggregates. recordEvent(object $payload) wraps the POPO in an EventEnvelope. pullDomainEvents() drains and returns EventEnvelope[].',
+            'AggregateId'    => 'Base class for typed IDs. Wraps a UUID v7 string.',
+            'EventEnvelope'  => 'Immutable wrapper produced by AggregateRoot::recordEvent(). Carries eventId, aggregateId, aggregateType, aggregateVersion, payloadType, schemaVersion, occurredAt, payload (POPO), and Metadata.',
+            'Metadata'       => 'Value object inside EventEnvelope. Carries correlationId, causationId, traceId, tenantId, userId, and custom[].',
+            'ValueObject'    => 'Base class for value objects. Implements equality by value.',
+            'Command'        => 'Base DTO for CQRS commands.',
+            'Query'          => 'Base DTO for CQRS queries.',
         ],
         'config'    => null,
         'commands'  => [],
@@ -39,13 +40,14 @@ return [
     'messaging' => [
         'description' => 'Event-driven messaging: Kafka producer/consumer, transactional outbox, dead letter queue, hooks, middleware.',
         'provides'    => [
-            'EventBusInterface'      => 'dispatch(DomainEvent): void — writes to outbox (default) or produces directly.',
+            'EventBusInterface'      => 'dispatch(EventEnvelope): void — writes to outbox (default) or produces directly. dispatchBatch() for multiple envelopes.',
             '#[RegisterProducer]'    => 'Attribute to register a Kafka producer definition on a MessagingConfig class.',
             '#[RegisterConsumer]'    => 'Attribute to register a Kafka consumer definition on a MessagingConfig class.',
-            '#[AsEventHandler]'      => 'Attribute to register a Kafka event handler (consumer side).',
+            '#[AsEventHandler]'      => 'Attribute to register a Kafka event handler (consumer side). Handler method receives the POPO payload; optionally also EventEnvelope, Metadata, or header attributes.',
+            'Header injection'       => '#[MessageId], #[CorrelationId], #[CausationId], #[TraceId], #[Timestamp], #[TenantId], #[UserId], #[Header("name")] — inject specific envelope fields as handler parameters.',
             'OutboxRelayWorker'      => 'Polls vortos_outbox and produces pending messages to Kafka.',
             'DeadLetterWriter'       => 'Writes permanently failed consumer messages to vortos_failed_messages.',
-            'Hooks'                  => '#[BeforeDispatch], #[AfterDispatch], #[PreSend], #[BeforeConsume], #[AfterConsume]',
+            'Hooks'                  => '#[BeforeDispatch], #[AfterDispatch], #[PreSend], #[BeforeConsume], #[AfterConsume] — consumer hooks receive EventEnvelope + consumerName. #[BeforeHandler], #[AfterHandler] — per-handler hooks fired directly by ConsumerRunner (not middleware stack); AfterHandler also receives handlerId, skipped bool, latencyMs, and optional Throwable.',
         ],
         'config' => [
             'driver'              => 'kafka (default) | in-memory',
@@ -57,13 +59,15 @@ return [
             'dlq_table'           => 'vortos_failed_messages (default)',
         ],
         'commands' => [
-            'vortos:consume'          => 'Start the Kafka consumer worker process',
-            'vortos:outbox:relay'     => 'Start the outbox relay worker (polls and produces to Kafka)',
-            'vortos:outbox:replay'    => 'Reset permanently failed outbox rows back to pending. Flags: --latest --limit --transport --event-class --id --created-from --created-to --dry-run',
-            'vortos:dlq:replay'       => 'Replay dead-lettered consumer messages back to Kafka. Flags: --latest --limit --transport --event-class --id --failed-from --failed-to --dry-run',
-            'vortos:consumers:list'   => 'List all registered consumers',
-            'vortos:transports:list'  => 'List all registered transports',
-            'vortos:setup:messaging'  => 'Publish outbox and DLQ migration files',
+            'vortos:consume'            => 'Start the Kafka consumer worker process',
+            'vortos:outbox:relay'       => 'Start the outbox relay worker (polls and produces to Kafka)',
+            'vortos:outbox:replay'      => 'Reset permanently failed outbox rows back to pending. Flags: --latest --limit --transport --event-class --id --created-from --created-to --dry-run',
+            'vortos:dlq:replay'         => 'Replay dead-lettered consumer messages back to Kafka. Flags: --latest --limit --transport --event-class --id --failed-from --failed-to --dry-run',
+            'vortos:consumers:list'     => 'List all registered consumers with their transports and handler counts',
+            'vortos:transports:list'    => 'List all registered transports with driver and topic details',
+            'vortos:kafka:tail'         => 'Dev tool — stream raw Vortos events from a Kafka transport to the terminal. Payload is sanitized via PayloadSanitizerInterface. Args: <transport>. Flags: --brokers --group-id --from-beginning --limit. Verbose (-v) shows partition, offset, timestamp, all headers.',
+            'vortos:consumer:tail'      => 'Dev tool (non-prod only) — observe a running consumer worker in real time via Redis pub/sub. Sets vortos:tail-ctrl:{consumer} Redis key; ConsumerTailControlHook on the worker polls for it and publishes per-handler events to vortos:tail:{consumer} channel. Ctrl+C deletes the key to deactivate. Shows per-handler outcomes (Succeeded/SucceededAfterRetries/SkippedIdempotent/DeadLettered/etc) with latency. Requires Redis cache driver. Args: <consumer>.',
+            'vortos:consume --tail'     => 'Dev option on vortos:consume — activates ConsoleTailChannel for live per-handler output in the same process. Worker still runs normally; no Redis required.',
         ],
     ],
 
@@ -88,8 +92,9 @@ return [
             'vortos:migrate:make'       => 'Generate an empty migration class',
             'vortos:migrate:rollback'   => 'Undo the last N migrations',
             'vortos:migrate:fresh'      => 'Drop all tables and rerun (dev/test only)',
-            'vortos:migrate:baseline'   => 'Mark all migrations as executed (legacy schema import)',
-            'vortos:migrate:adopt'      => 'Mark verified existing schema as executed',
+            'vortos:migrate:adopt'      => 'Mark existing schema as executed without running SQL. Flags: --all-compatible --module-only --allow-unverified --verify --dry-run --force --json',
+            'vortos:migrate:unadopt'    => 'Remove a migration tracking record without touching the schema. Omit version to unadopt the latest. Flags: --force',
+            'vortos:migrate:verify'     => 'CI check: verify all executed framework migrations match the live database schema. Exit 0 = clean, Exit 1 = drift. Flags: --json',
         ],
     ],
 
@@ -204,10 +209,11 @@ return [
         'config'      => null,
         'commands'    => [
             'vortos:make:context'             => 'Scaffold a bounded context directory tree (Domain/Application/Infrastructure/Representation)',
-            'vortos:make:entity'              => 'Generate Aggregate + AggregateId + repository interface',
-            'vortos:make:value-object'        => 'Generate a ValueObject class',
-            'vortos:make:domain-event'        => 'Generate a DomainEvent class',
-            'vortos:make:domain-exception'    => 'Generate a domain exception class',
+            'vortos:make:aggregate'           => 'Generate an aggregate root, its typed AggregateId, and repository interface inside Domain/{Aggregate}/',
+            'vortos:make:entity'              => 'Generate a child entity and its typed EntityId inside Domain/{Aggregate}/Entities/ (--aggregate required)',
+            'vortos:make:value-object'        => 'Generate a ValueObject — --aggregate places it in Domain/{Aggregate}/ValueObjects/, --shared places it in Domain/Shared/ValueObjects/',
+            'vortos:make:domain-event'        => 'Generate a pure POPO event class (final readonly, no base class) inside Domain/{Aggregate}/Event/',
+            'vortos:make:domain-error'        => 'Generate a domain error with HTTP status mapping inside Domain/{Aggregate}/Error/',
             'vortos:make:command'             => 'Generate a Command DTO + Handler skeleton',
             'vortos:make:query'               => 'Generate a Query DTO + Handler skeleton',
             'vortos:make:projection-handler'  => 'Generate a Kafka projection handler (read model updater)',
@@ -296,13 +302,20 @@ return [
     ],
 
     'foundation' => [
-        'description' => 'Health checks and worker mode service resetter.',
+        'description' => 'Health checks, pre-flight diagnostics, boot error rendering, and worker mode service resetter.',
         'provides'    => [
-            'HealthRegistry'   => 'Register HealthCheckInterface implementations. Exposed via /health/ready and /health/live.',
-            'ServicesResetter' => 'Calls reset() on all ResettableInterface services after each request in worker mode.',
+            'HealthRegistry'         => 'Register HealthCheckInterface implementations. Exposed via /health/ready and /health/live.',
+            'ServicesResetter'       => 'Calls reset() on all ResettableInterface services after each request in worker mode.',
+            'DoctorRegistry'         => 'Runs all registered DoctorCheckInterface implementations. Tag with #[AsDoctor].',
+            '#[AsDoctor]'            => 'Attribute to register a DoctorCheckInterface as a pre-flight diagnostic check.',
+            'DoctorCheckInterface'   => 'run(): DoctorResult — implement to add a custom doctor check.',
+            'BootErrorRenderer'      => 'Formats boot exceptions in CLI with human-readable hints for common failures.',
         ],
         'config'   => null,
-        'commands' => [],
+        'commands' => [
+            'vortos:health'  => 'Check all registered HealthCheckInterface services. Flags: --json (machine-readable output)',
+            'vortos:doctor'  => 'Run all registered pre-flight diagnostic checks. Flags: --fail-on-warning (exit 1 on warnings)',
+        ],
     ],
 
     'setup' => [
@@ -312,6 +325,30 @@ return [
         'commands'    => [
             'vortos:setup'           => 'Interactive project setup wizard. Flags: --preset, --profile, --dry-run, --force',
             'vortos:config:publish'  => 'Publish module config stubs to project config/. Flags: --module=name, --force, --dry-run',
+        ],
+    ],
+
+    'feature_flags' => [
+        'description' => 'Runtime feature flags with per-user, attribute, and percentage-rollout targeting rules.',
+        'provides'    => [
+            'FlagRegistry'              => 'isEnabled(name): bool, getVariant(name): ?string — evaluate flags against the current request context.',
+            'FlagEvaluator'             => 'Evaluates flag rules against a FlagContext in priority order: users → attribute → percentage.',
+            '#[FeatureFlag("name")]'    => 'Attribute on a Controller or handler method to gate access behind a flag. Returns 403 when the flag is off.',
+            'FeatureFlagMiddleware'     => 'HTTP middleware that evaluates #[FeatureFlag] attributes per request.',
+            'FlagStorageInterface'      => 'findAll(): FeatureFlag[], findByName(name): ?FeatureFlag, save(flag): void, delete(name): void',
+        ],
+        'config' => [
+            'storage'    => 'database (default) — stores flags in vortos_feature_flags table',
+            'cache_ttl'  => 'seconds to cache flag state in Redis (default: 60). Set 0 to disable caching.',
+        ],
+        'commands' => [
+            'vortos:flags:list'     => 'List all feature flags with status, rule count, and description. Flags: --json',
+            'vortos:flags:show'     => 'Show full details of a feature flag including all targeting rules. Args: <name>. Flags: --json',
+            'vortos:flags:create'   => 'Create a new feature flag. Args: <name>. Options: --description, --enable',
+            'vortos:flags:enable'   => 'Enable a feature flag globally. Args: <name>.',
+            'vortos:flags:disable'  => 'Disable a feature flag (kill switch — off for everyone instantly). Args: <name>.',
+            'vortos:flags:delete'   => 'Permanently delete a feature flag. Args: <name>.',
+            'vortos:flags:add-rule' => 'Add a targeting rule to a flag. Args: <name>. Options: --type=users|attribute|percentage, --users, --attribute, --operator, --value, --percentage, --clear',
         ],
     ],
 

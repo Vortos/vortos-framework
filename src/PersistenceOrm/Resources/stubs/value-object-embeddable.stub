@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace {{Namespace}};
+
+use Doctrine\ORM\Mapping as ORM;
+use Vortos\Domain\ValueObject\ValueObject;
+
+#[ORM\Embeddable]
+final class {{ClassName}} extends ValueObject
+{
+    #[ORM\Column(type: 'string')]
+    private string $value;
+
+    private function __construct(string $value)
+    {
+        $this->value = $value;
+    }
+
+    public static function fromString(string $value): self
+    {
+        return new self($value);
+    }
+
+    public function equals(ValueObject $other): bool
+    {
+        return $other instanceof self && $this->value === $other->value;
+    }
+
+    public function __toString(): string
+    {
+        return $this->value;
+    }
+}

@@ -2,15 +2,11 @@
 
 declare(strict_types=1);
 
-namespace {{Namespace}}\Domain\Event;
+namespace {{Namespace}};
 
-use Vortos\Domain\Event\DomainEvent;
-
-final readonly class {{ClassName}}Event extends DomainEvent
+final readonly class {{ClassName}}
 {
     public function __construct(
-        string $aggregateId,
-    ) {
-        parent::__construct($aggregateId);
-    }
+        // public string $property,
+    ) {}
 }
