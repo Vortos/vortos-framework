@@ -24,7 +24,7 @@ use Vortos\PersistenceOrm\Exception\ForeignKeyConstraintException;
 use Vortos\PersistenceOrm\Exception\LockWaitTimeoutException;
 use Vortos\PersistenceOrm\Exception\NotNullConstraintException;
 use Vortos\PersistenceOrm\Exception\UniqueConstraintException;
-use Vortos\PersistenceOrm\Write\OrmWriteRepository;
+use Vortos\PersistenceOrm\Write\OrmStore;
 
 // --- fixtures ---
 
@@ -48,19 +48,16 @@ final class RepoTestAggregate extends OrmAggregateRoot
     }
 }
 
-final class RepoTestRepository extends OrmWriteRepository
-{
-    protected function entityClass(): string
-    {
-        return RepoTestAggregate::class;
-    }
-}
-
 // --- tests ---
 
 final class OrmWriteRepositoryTest extends TestCase
 {
-    public function test_find_by_id_delegates_to_em_find(): void
+    private function store(EntityManagerInterface $em): OrmStore
+    {
+        return new OrmStore($em, RepoTestAggregate::class);
+    }
+
+    public function test_find_delegates_to_em_find(): void
     {
         $agg = new RepoTestAggregate();
         $id  = $agg->getId();
@@ -71,21 +68,19 @@ final class OrmWriteRepositoryTest extends TestCase
             ->with(RepoTestAggregate::class, (string) $id)
             ->willReturn($agg);
 
-        $repo   = new RepoTestRepository($em);
-        $result = $repo->findById($id);
+        $result = $this->store($em)->find($id);
 
         $this->assertSame($agg, $result);
     }
 
-    public function test_find_by_id_returns_null_when_not_found(): void
+    public function test_find_returns_null_when_not_found(): void
     {
         $id = RepoTestId::generate();
 
         $em = $this->createMock(EntityManagerInterface::class);
         $em->method('find')->willReturn(null);
 
-        $repo = new RepoTestRepository($em);
-        $this->assertNull($repo->findById($id));
+        $this->assertNull($this->store($em)->find($id));
     }
 
     public function test_save_calls_persist_and_flush_for_new_aggregate(): void
@@ -97,7 +92,7 @@ final class OrmWriteRepositoryTest extends TestCase
         $em->expects($this->once())->method('persist')->with($agg);
         $em->expects($this->once())->method('flush');
 
-        (new RepoTestRepository($em))->save($agg);
+        $this->store($em)->save($agg);
     }
 
     public function test_save_skips_persist_for_managed_aggregate(): void
@@ -109,7 +104,7 @@ final class OrmWriteRepositoryTest extends TestCase
         $em->expects($this->never())->method('persist');
         $em->expects($this->once())->method('flush');
 
-        (new RepoTestRepository($em))->save($agg);
+        $this->store($em)->save($agg);
     }
 
     public function test_save_wraps_doctrine_optimistic_lock_exception(): void
@@ -125,7 +120,7 @@ final class OrmWriteRepositoryTest extends TestCase
 
         $this->expectException(OptimisticLockException::class);
 
-        (new RepoTestRepository($em))->save($agg);
+        $this->store($em)->save($agg);
     }
 
     public function test_delete_calls_remove_and_flush_for_managed_aggregate(): void
@@ -137,7 +132,7 @@ final class OrmWriteRepositoryTest extends TestCase
         $em->expects($this->once())->method('remove')->with($agg);
         $em->expects($this->once())->method('flush');
 
-        (new RepoTestRepository($em))->delete($agg);
+        $this->store($em)->delete($agg);
     }
 
     public function test_delete_uses_find_for_unmanaged_aggregate(): void
@@ -150,7 +145,7 @@ final class OrmWriteRepositoryTest extends TestCase
         $em->expects($this->once())->method('remove')->with($agg);
         $em->expects($this->once())->method('flush');
 
-        (new RepoTestRepository($em))->delete($agg);
+        $this->store($em)->delete($agg);
     }
 
     public function test_delete_is_no_op_when_aggregate_not_found(): void
@@ -163,7 +158,7 @@ final class OrmWriteRepositoryTest extends TestCase
         $em->expects($this->never())->method('remove');
         $em->expects($this->never())->method('flush');
 
-        (new RepoTestRepository($em))->delete($agg);
+        $this->store($em)->delete($agg);
     }
 
     public function test_delete_wraps_doctrine_optimistic_lock_exception(): void
@@ -179,7 +174,7 @@ final class OrmWriteRepositoryTest extends TestCase
 
         $this->expectException(OptimisticLockException::class);
 
-        (new RepoTestRepository($em))->delete($agg);
+        $this->store($em)->delete($agg);
     }
 
     // --- DBAL exception translation ---
@@ -226,7 +221,7 @@ final class OrmWriteRepositoryTest extends TestCase
 
     public function test_save_wraps_unknown_dbal_exception_as_persistence_exception(): void
     {
-        $agg = new RepoTestAggregate();
+        $agg           = new RepoTestAggregate();
         $dbalException = $this->createMock(\Doctrine\DBAL\Exception::class);
 
         $em = $this->createMock(EntityManagerInterface::class);
@@ -236,7 +231,7 @@ final class OrmWriteRepositoryTest extends TestCase
 
         $this->expectException(\Vortos\PersistenceOrm\Exception\PersistenceException::class);
 
-        (new RepoTestRepository($em))->save($agg);
+        $this->store($em)->save($agg);
     }
 
     public function test_save_does_not_wrap_non_dbal_exception(): void
@@ -251,12 +246,12 @@ final class OrmWriteRepositoryTest extends TestCase
         $this->expectException(\DomainException::class);
         $this->expectExceptionMessage('domain error');
 
-        (new RepoTestRepository($em))->save($agg);
+        $this->store($em)->save($agg);
     }
 
     public function test_translated_exception_wraps_original_as_cause(): void
     {
-        $agg = new RepoTestAggregate();
+        $agg      = new RepoTestAggregate();
         $original = $this->createMock(DbalUniqueException::class);
 
         $em = $this->createMock(EntityManagerInterface::class);
@@ -265,7 +260,7 @@ final class OrmWriteRepositoryTest extends TestCase
         $em->method('flush')->willThrowException($original);
 
         try {
-            (new RepoTestRepository($em))->save($agg);
+            $this->store($em)->save($agg);
             $this->fail('Expected UniqueConstraintException');
         } catch (UniqueConstraintException $e) {
             $this->assertSame($original, $e->getPrevious());
@@ -274,7 +269,7 @@ final class OrmWriteRepositoryTest extends TestCase
 
     private function assertSaveTranslates(string $dbalClass, string $vortosClass): void
     {
-        $agg = new RepoTestAggregate();
+        $agg       = new RepoTestAggregate();
         $exception = $this->createMock($dbalClass);
 
         $em = $this->createMock(EntityManagerInterface::class);
@@ -284,12 +279,12 @@ final class OrmWriteRepositoryTest extends TestCase
 
         $this->expectException($vortosClass);
 
-        (new RepoTestRepository($em))->save($agg);
+        $this->store($em)->save($agg);
     }
 
     private function assertDeleteTranslates(string $dbalClass, string $vortosClass): void
     {
-        $agg = new RepoTestAggregate();
+        $agg       = new RepoTestAggregate();
         $exception = $this->createMock($dbalClass);
 
         $em = $this->createMock(EntityManagerInterface::class);
@@ -299,6 +294,6 @@ final class OrmWriteRepositoryTest extends TestCase
 
         $this->expectException($vortosClass);
 
-        (new RepoTestRepository($em))->delete($agg);
+        $this->store($em)->delete($agg);
     }
 }

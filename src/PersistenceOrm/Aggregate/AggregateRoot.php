@@ -44,7 +44,7 @@ use Vortos\Domain\Aggregate\AggregateRoot as BaseAggregateRoot;
  * On INSERT: Doctrine stores whatever value $ormVersion holds (starts at 0).
  * On UPDATE: Doctrine executes WHERE version = $ormVersion SET version = version + 1,
  *            then updates $ormVersion on the entity to the incremented value.
- * On conflict: Doctrine throws OptimisticLockException — OrmWriteRepository
+ * On conflict: Doctrine throws OptimisticLockException — OrmStore
  *              translates this to the domain OptimisticLockException.
  */
 #[ORM\MappedSuperclass]
@@ -62,10 +62,12 @@ abstract class AggregateRoot extends BaseAggregateRoot
     public function incrementVersion(): void
     {
         $this->ormVersion++;
+        parent::incrementVersion();
     }
 
     protected function restoreVersion(int $version): void
     {
         $this->ormVersion = $version;
+        parent::restoreVersion($version);
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Vortos\Domain\Repository;
 
 use Vortos\Domain\Aggregate\AggregateRoot;
-use Vortos\Domain\Identity\AggregateId;
 
 /**
  * Contract for aggregate write repositories.
@@ -14,18 +13,12 @@ use Vortos\Domain\Identity\AggregateId;
  * The domain never depends on DBAL, ORM, or any persistence technology.
  * Only this interface is visible to application layer code.
  *
- * The default implementation is DbalWriteRepository in vortos-persistence.
- * Doctrine ORM implementation is available in vortos-persistence-orm.
+ * The default implementation uses DbalStore via #[UsesDbalMapper] in vortos-persistence.
+ * Doctrine ORM implementation uses OrmStore via #[UsesOrmEntity] in vortos-persistence-orm.
  * InMemoryWriteRepository ships for testing.
  */
 interface WriteRepositoryInterface
 {
-    /**
-     * Find an aggregate by its ID.
-     * Returns null if not found — never throws for missing records.
-     */
-    public function findById(AggregateId $id): ?AggregateRoot;
-
     /**
      * Persist an aggregate.
      * Handles both insert (new aggregate) and update (existing).
