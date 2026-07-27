@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Vortos\Migration\Command;
 
+use Vortos\Migration\Service\PublishManifestKey;
+
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -194,7 +196,7 @@ final class MigratePublishCommand extends Command
 
                 $this->writeFile($filePath, $content);
 
-                $manifest[$stub['relative']] = [
+                $manifest[$this->canonicalKeyFor($stub)] = [
                     'source_type'  => isset($stub['provider']) ? 'schema' : 'sql',
                     'class'        => $fqcn,
                     'published_at' => (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM),
@@ -390,17 +392,19 @@ final class MigratePublishCommand extends Command
     }
 
     /**
+     * @param array<string, mixed> $stub
+     */
+    private function canonicalKeyFor(array $stub): string
+    {
+        return PublishManifestKey::canonical($stub);
+    }
+
+    /**
      * @param array<string, mixed> $manifest
      */
     private function manifestKeyFor(array $stub, array $manifest): ?string
     {
-        if (isset($manifest[$stub['relative']])) {
-            return $stub['relative'];
-        }
-
-        $legacySqlKey = $this->replaceExtension($stub['relative'], 'sql');
-
-        return isset($stub['provider'], $manifest[$legacySqlKey]) ? $legacySqlKey : null;
+        return PublishManifestKey::resolve($stub, $manifest);
     }
 
     /**
