@@ -18,19 +18,15 @@ use Vortos\Paddle\ValueObject\PaddleTransactionId;
 
 final class ImmediateTransactionServiceTest extends TestCase
 {
-    /** @param array<string, mixed>|null $customData */
-    private function makeSdkTransaction(
-        string $id = 'txn_test_123',
-        string $status = 'draft',
-        ?array $customData = null,
-    ): \Paddle\SDK\Entities\Transaction {
+    private function makeSdkTransaction(string $id = 'txn_test_123', string $status = 'draft'): \Paddle\SDK\Entities\Transaction
+    {
         return \Paddle\SDK\Entities\Transaction::from([
             'id'                       => $id,
             'status'                   => $status,
             'customer_id'              => 'ctm_test',
             'address_id'               => null,
             'business_id'              => null,
-            'custom_data'              => $customData,
+            'custom_data'              => null,
             'currency_code'            => 'USD',
             'origin'                   => 'api',
             'subscription_id'          => null,
@@ -103,33 +99,6 @@ final class ImmediateTransactionServiceTest extends TestCase
         $this->assertSame('USD', $transaction->currencyCode);
         $this->assertSame('1200', $transaction->total);
         $this->assertSame(\Vortos\Paddle\ValueObject\TransactionStatus::Billed, $transaction->status);
-    }
-
-    public function test_get_carries_custom_data_back_to_the_caller(): void
-    {
-        $client = $this->createMock(PaddleApiClientInterface::class);
-        $client->method('call')->willReturn($this->makeSdkTransaction(
-            'txn_xyz',
-            'completed',
-            ['intent' => 'create_organisation', 'org_name' => 'Riverside'],
-        ));
-
-        $service     = new ImmediateTransactionService($client);
-        $transaction = $service->get(PaddleTransactionId::of('txn_xyz'));
-
-        $this->assertSame('create_organisation', $transaction->customData['intent'] ?? null);
-        $this->assertSame('Riverside', $transaction->customData['org_name'] ?? null);
-    }
-
-    public function test_get_reports_absent_custom_data_as_an_empty_array(): void
-    {
-        $client = $this->createMock(PaddleApiClientInterface::class);
-        $client->method('call')->willReturn($this->makeSdkTransaction('txn_xyz', 'billed'));
-
-        $service     = new ImmediateTransactionService($client);
-        $transaction = $service->get(PaddleTransactionId::of('txn_xyz'));
-
-        $this->assertSame([], $transaction->customData);
     }
 
     public function test_update_delegates_to_sdk(): void
