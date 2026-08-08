@@ -66,6 +66,7 @@ use Vortos\Backup\Pitr\PostgresWalArchiver;
 use Vortos\Backup\Pitr\PostgresWalFetcher;
 use Vortos\Backup\Port\BackupStoreInterface;
 use Vortos\Backup\Port\BackupStoreRegistry;
+use Vortos\Backup\Port\BackupStoreResolver;
 use Vortos\Backup\Port\BackupTargetInterface;
 use Vortos\Backup\Port\BackupTargetRegistry;
 use Vortos\Backup\Replication\SecondaryReplicator;
@@ -112,6 +113,16 @@ final class BackupExtension extends Extension
         $drillTable = $prefix . 'backup_drill_report';
 
         $storeKey = (string) ($_ENV['VORTOS_BACKUP_STORE'] ?? 'object-store');
+        // Set only when WAL lives in its own bucket, which the object-store package decides from the
+        // SAME env var. Deliberately not `$container->has('vortos_object_store.wal')`: extension
+        // load() order is not guaranteed, so that check is a race against registration order — the
+        // exact bug that left DeadManDetector unregistered in production for weeks while every
+        // schedule quietly lost its alarm. Reading env is order-independent. The Reference below is
+        // still safe, because references resolve at compile time, after every extension has loaded.
+        $walBucket = trim((string) ($_ENV['OBJECT_STORE_WAL_BUCKET'] ?? ''));
+        $walStoreKey = $walBucket === ''
+            ? null
+            : (trim((string) ($_ENV['VORTOS_BACKUP_WAL_STORE'] ?? '')) ?: 'object-store-wal');
         $keyPrefix = (string) ($_ENV['VORTOS_BACKUP_KEY_PREFIX'] ?? 'backups');
         $lockDir = (string) ($_ENV['VORTOS_BACKUP_LOCK_DIR'] ?? ($projectDir . '/var/backup-locks'));
         $mongoUri = (string) ($_ENV['VORTOS_BACKUP_MONGO_URI'] ?? '');
@@ -201,6 +212,24 @@ final class BackupExtension extends Extension
             ->setArgument('$objectStore', new Reference(ImmediateObjectStoreInterface::class))
             ->setAutoconfigured(true)
             ->addTag(CollectBackupStoresPass::TAG)
+            ->setPublic(false);
+
+        // A second backup store over the WAL bucket. Same class, distinct driver key: the collection
+        // pass prefers an explicit key on the tag over the #[AsDriver] attribute, so two instances
+        // coexist without either claiming the other's key.
+        if ($walStoreKey !== null) {
+            $container->register('vortos.backup.store.wal', ObjectStoreBackupStore::class)
+                ->setArgument('$objectStore', new Reference('vortos_object_store.wal'))
+                ->addTag(CollectBackupStoresPass::TAG, ['key' => $walStoreKey])
+                ->setPublic(false);
+        }
+
+        // Resolves where an artifact belongs (by kind, when writing) and where it already is (by the
+        // artifact, when reading). Registered unconditionally so the services below can depend on it;
+        // with no WAL store it answers "primary" to everything.
+        $container->register(BackupStoreResolver::class, BackupStoreResolver::class)
+            ->setArgument('$primaryStoreKey', $storeKey)
+            ->setArgument('$walStoreKey', $walStoreKey)
             ->setPublic(false);
 
         // ── Restore target drivers ──
@@ -341,6 +370,8 @@ final class BackupExtension extends Extension
             ->setArgument('$events', new Reference(BackupEventSinkInterface::class))
             ->setArgument('$clock', new Reference(SystemClock::class))
             ->setArgument('$lockPolicy', $lockPolicy)
+            ->setArgument('$stores', new Reference(BackupStoreRegistry::class))
+            ->setArgument('$storeResolver', new Reference(BackupStoreResolver::class))
             ->setPublic(false);
 
         $container->register(BackupRunner::class, BackupRunner::class)
@@ -354,6 +385,7 @@ final class BackupExtension extends Extension
             ->setArgument('$clock', new Reference(SystemClock::class))
             ->setArgument('$storeKey', $storeKey)
             ->setArgument('$keyPrefix', $keyPrefix)
+            ->setArgument('$storeResolver', new Reference(BackupStoreResolver::class))
             ->setPublic(false);
 
         // ── Restore ──
@@ -490,7 +522,7 @@ final class BackupExtension extends Extension
             ->setArgument('$stores', new Reference(BackupStoreRegistry::class))
             ->setArgument('$catalog', new Reference(BackupCatalogRepositoryInterface::class))
             ->setArgument('$clock', new Reference(SystemClock::class))
-            ->setArgument('$storeKey', $storeKey)
+            ->setArgument('$storeKey', $walStoreKey ?? $storeKey)
             ->setArgument('$keyPrefix', $keyPrefix)
             // WAL rides the SAME encryption seam as base backups. Shipping segments in plaintext
             // while encrypting the bases they replay onto protected almost nothing: a WAL stream
@@ -503,7 +535,9 @@ final class BackupExtension extends Extension
         // make recovery replay ciphertext, so these two are registered together on purpose.
         $container->register(PostgresWalFetcher::class, PostgresWalFetcher::class)
             ->setArgument('$stores', new Reference(BackupStoreRegistry::class))
-            ->setArgument('$storeKey', $storeKey)
+            // Must match the archiver: encrypting WAL into one bucket and fetching from another would
+            // make recovery replay nothing at all.
+            ->setArgument('$storeKey', $walStoreKey ?? $storeKey)
             ->setArgument('$keyPrefix', $keyPrefix)
             ->setArgument('$cipher', new Reference(EnvelopeStreamCipher::class))
             ->setArgument('$keyProvider', $backupKeyProviderRef)
